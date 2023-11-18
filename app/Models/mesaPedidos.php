@@ -1,9 +1,37 @@
 <?php
 
+require_once '..//db/accesoDatos.php';
+
 class MesaPedidos{
 
     public $idMesa;
     public $idPedido;
+
+    public function __construct($idMesa, $idPedido){
+
+        $mesa = Mesa::ObtenerPorID($idMesa);
+        $pedido = Pedido::ObtenerPorID($idPedido);
+
+        if($pedido && $mesa){
+            $this->idMesa = $idMesa;
+            $this->idPedido = $idPedido;
+        }
+    }
+
+    public function Guardar(){
+
+        $retorno = false;
+        $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
+        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO mesa_pedidos (idMesa, idPedido) VALUES (:idMesa, :idPedido");
+        $consulta -> bindParam(":idMesa", $this-> idMesa);
+        $consulta -> bindParam(":idPedido", $this-> idPedido);
+
+        $resultado = $consulta -> execute();
+        if($resultado){
+            $retorno = $objetoAccesoDatos->RetornarUltimoIdInsertado();
+        }
+        return $retorno;
+    }
 
     private static function ObtenerMesaPedidos($idMesa){
         $retorno = false;

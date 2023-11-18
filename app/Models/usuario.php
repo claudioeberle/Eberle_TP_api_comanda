@@ -1,6 +1,6 @@
 <?php
 
-require_once './db/accesoDatos.php';
+require_once '..//db/accesoDatos.php';
 
 class Usuario {
     public $id;

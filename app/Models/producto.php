@@ -1,6 +1,6 @@
 <?php
 
-require_once './db/accesoDatos.php';
+require_once '..//db/accesoDatos.php';
 
 class Producto {
     public $id;
@@ -20,7 +20,7 @@ class Producto {
     public function GuardarProducto() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO Productos (nombre, tipo, sector, precio) VALUES (:nombre, :tipo, :sector, :precio)");
+        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO productos (nombre, tipo, sector, precio) VALUES (:nombre, :tipo, :sector, :precio)");
         $consulta->bindParam(':nombre', $this -> nombre);
         $consulta->bindParam(':tipo', $this -> tipo);
         $consulta->bindParam(':sector', $this -> sector);
@@ -36,7 +36,7 @@ class Producto {
     public static function ObtenerTodosLosProductos() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $query = "SELECT * FROM Productos";
+        $query = "SELECT * FROM productos";
         $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
         $resultado = $consulta->execute();
         if ($resultado) {

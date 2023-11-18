@@ -25,7 +25,7 @@ class Pedido {
         if($codigoPedido){
             $this -> codigoPedido = $codigoPedido;
         } else{
-            $this -> codigoPedido = self::ObtenerCodigoPedido();
+            $this -> codigoPedido = self::AsignarCodigoPedido();
         }
         if($estado){
             $this -> estado = $estado;
@@ -224,33 +224,33 @@ class Pedido {
     public function CambiarEstado($nuevoEstado, $tiempoPreparacion = false) {
 
         $retorno = false;
-        $modificacion = false;
+        $modificacion = true;
 
-        if($nuevoEstado === 'pendiente' || $nuevoEstado === 'en preparacion' || $nuevoEstado === 'listo para servir'){
+        if($nuevoEstado === 'pendiente' || $nuevoEstado === 'en preparacion' || $nuevoEstado === 'listo para servir' 
+        || $nuevoEstado === 'entregado' || $nuevoEstado === 'cancelado'){
 
             if($tiempoPreparacion !== false && $nuevoEstado === 'en preparacion'){
 
                 $this->estado = $nuevoEstado;
                 $this->tiempoPreparacion = $tiempoPreparacion;
                 $retorno = ["Estado" => "{$this->estado}"];
-                $modificacion = true;
 
-            } else if($tiempoPreparacion === false && ($nuevoEstado === 'pendiente' || $nuevoEstado === 'listo para servir')){
+            } else if($tiempoPreparacion === false && ($nuevoEstado === 'pendiente' || $nuevoEstado === 'listo para servir' || $nuevoEstado === 'entregado' || $nuevoEstado === 'cancelado')){
                 
                 $this->estado = $nuevoEstado;
                 $retorno = ["Estado" => "{$this->estado}"];
-                $modificacion = true;
+            } else {
+                $modificacion = false;
             }
 
             if($modificacion){
-                
                 $this->Modificar();
             }
         }
         return $retorno;
     }
 
-    private static function ObtenerCodigoPedido(){
+    private static function AsignarCodigoPedido(){
 
         $reintentos = 0;
 
@@ -261,8 +261,11 @@ class Pedido {
 
         }while((Utiles::ValidarExistenciaCodigo($codigo, $ruta) || $codigo === "") && $reintentos < 5);
 
-        Utiles::GuardarCodigoEnCSV($codigo, $ruta);
-
+        if($reintentos >= 5){
+            $codigo = false;
+        } else {
+            Utiles::GuardarCodigoEnCSV($codigo, $ruta);
+        }
         return $codigo;
     }
 }

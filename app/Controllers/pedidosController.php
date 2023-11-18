@@ -1,8 +1,7 @@
 <?php
 
-require_once './middlewares/Validadores.php';
-require_once './models/Pedido.php';
-require_once './interfaces/IApiUsable.php';
+require_once '../Models/pedido.php';
+require_once '../Interfaces/IApiUsable.php';
 
 class PedidoController implements IApiUsable {
 
@@ -14,9 +13,12 @@ class PedidoController implements IApiUsable {
 
          if (isset($parametros["codigoMesa"]) && isset($parametros["idProducto"]) && isset($parametros["nombreCliente"]) && isset($parametros["estado"])) { 
 
-            $mesa = Mesa::ObtenerPorCodigoIdentificacion($parametros["codigoMesa"]);
+            $codigoMesa = $parametros["codigoMesa"];
+            $idProducto = $parametros["idProducto"];
+            $nombreCliente = $parametros["nombreCliente"];
 
-            $producto = Producto::ObtenerPorID($parametros["idProducto"]);
+            $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
+            $producto = Producto::ObtenerPorID($idProducto);
 
             if ($mesa && $producto) {
 
@@ -24,18 +26,24 @@ class PedidoController implements IApiUsable {
                 //$fotoMesa = $request -> getUploadedFiles()['foto'];
                 //self::SubirFotoMesa($codigo, $fotoMesa);
                 
-                $pedido = new Pedido($parametros['codigoMesa'], $parametros['idProducto'], $parametros["nombreCliente"]);
-                $resultado = $pedido -> GuardarPedido();
-                $mesa -> CambiarEstado("con cliente esperando pedido");
+                $pedido = new Pedido($codigoMesa, $idProducto, $nombreCliente);
+                if($pedido->codigoPedido !== false){
+                    $resultado = $pedido -> GuardarPedido();
+                    $mesa -> CambiarEstado("con cliente esperando pedido");
+                    $mesa->AgregarPedido($pedido->id);
 
-                if (is_string($resultado)) {
+                    if (is_string($resultado)) {
 
-                    $payload = json_encode(array("Resultado" => "Codigo de nuevo pedido: {$resultado}"));
+                        $payload = json_encode(array("Resultado" => "Codigo de nuevo pedido: {$resultado}"));
 
+                    } else {
+
+                        $payload = json_encode(array("ERROR" => "Hubo un error durante la creacion del pedido"));
+                    }
                 } else {
-
-                    $payload = json_encode(array("ERROR" => "Hubo un error durante la creacion del pedido"));
+                    $payload = json_encode(array("ERROR" => "Hubo un error en la asignacion de codigo pedido - Reintente"));
                 }
+                
             } else {
                 $payload = json_encode(array("ERROR" => "No se encontraron la mesa o el producto - Revise los datos"));
             }
@@ -109,60 +117,96 @@ class PedidoController implements IApiUsable {
 
         if (isset($args["sector"])) {
 
-            $listaPedidos = Pedido::ObtenerPedidosPorSector($args["sector"]); // Trae solo los pedidos pendientes de ese sector
+            $listaPedidos = Pedido::ObtenerPedidosPorSector($args["sector"], true); // Trae solo los pedidos pendientes de ese sector
 
-            if (is_array($lista)) {
-                $payload = json_encode(array("Lista" => $lista));
+            if (is_array($listaPedidos)) {
+
+                $payload = json_encode(array("Lista" => json_encode($listaPedidos)));
+
+            } else if(count($listaPedidos) === 0){
+
+                $payload = json_encode(array("Lista" => "No hay pedidos pendientes"));
+
             } else {
+
                 $payload = json_encode(array("ERROR" => "Hubo un error al obtener todos los productos"));
             }
         } else {
-            $payload = json_encode(array("ERROR" => "El parámetro 'sector' es obligatorio para traer los pedidos por sector"));
+            $payload = json_encode(array("ERROR" => "El parametro 'sector' es obligatorio"));
         }
         
         $response -> getBody() -> write($payload);
         return $response -> withHeader('Content-Type', 'application/json');
     }
 
-    public function CambiarEstado($request, $response, $args) {
+    public function CambiarEstadoPedido($request, $response, $args) {
         $parametros = $request -> getParsedBody ();
 
-        if (Validadores::ValidarParametros($parametros, ["id"])) {
-            $payload = json_encode(array("ERROR" => "Hubo un error al cambiar el estado"));
-            $pedido = Pedido::ObtenerPorID($parametros["id"], true);
-            if ($pedido) {
-                $nuevoEstado = false;
-                $tiempoPreparacion = "";
-                switch($pedido -> estado) {
-                    case 'pendiente':
-                        if (Validadores::ValidarParametros($parametros, ["tiempoPreparacion"])) {
-                            $nuevoEstado = 'en preparacion';
-                            $tiempoPreparacion = $parametros["tiempoPreparacion"];
-                        }
-                        break;
-                    case 'en preparacion':
-                        $nuevoEstado = 'listo para servir';
-                    break;
-                    case 'listo para servir':
-                        $mesa = Mesa::ObtenerPorCodigoIdentificacion($pedido -> codigoMesa);
-                        $mesa -> CambiarEstado('con cliente comiendo');
-                        $nuevoEstado = 'entregado';
-                    break;
-                    default:
-                        $nuevoEstado = false;
-                    break;
-                }
+        if (isset($parametros["id"]) || isset($parametros["codigoPedido"])) {
 
-                if ($nuevoEstado) {
-                    if (Pedido::CambiarEstado($parametros["id"], $nuevoEstado, $tiempoPreparacion)) {
-                        $payload = json_encode(array("Resultado" => "El estado del pedido fue cambiado a '{$nuevoEstado}'"));
+            $payload = json_encode(array("ERROR" => "Hubo un error al cambiar el estado"));
+            
+            if(isset($parametros["id"])){
+
+                $pedido = Pedido::ObtenerPorID($parametros["id"], true);
+
+            }else {
+
+                $pedido = Pedido::ObtenerPorCodigoPedido($parametros["codigoPedido"], true);
+            }
+
+            if ($pedido) {
+
+                $mesa = Mesa::ObtenerPorCodigoMesa($pedido->codigoMesa);
+                if($mesa){
+
+                    $nuevoEstado = false;
+                    $tiempoPreparacion = "";
+
+                    switch($pedido -> estado) {
+
+                        case 'pendiente':
+
+                            if (isset($parametros["tiempoPreparacion"])) {
+                                $nuevoEstado = 'en preparacion';
+                                $tiempoPreparacion = $parametros["tiempoPreparacion"];
+                                $mesa -> CambiarEstado("con cliente esperando pedido");
+                            } else {
+                                $payload = json_encode(array("ERROR" => "Indique 'tiempoPreparacion'"));
+                            }
+                            break;
+
+                        case 'en preparacion':
+                            $nuevoEstado = 'listo para servir';
+                            $tiempoPreparacion = false;
+                        break;
+
+                        case 'listo para servir':
+                            $mesa -> CambiarEstado('con cliente comiendo');
+                            $nuevoEstado = 'entregado';
+                            $tiempoPreparacion = false;
+                        break;
+
+                        default:
+                            $nuevoEstado = false;
+                        break;
                     }
-                }
+
+                    if ($nuevoEstado) {
+
+                        if ($pedido->CambiarEstado($nuevoEstado, $tiempoPreparacion)) {
+
+                            $payload = json_encode(array("Resultado" => "El estado del pedido fue cambiado a '{$nuevoEstado}'"));
+                        }
+                    }
+                } else {
+                    $payload = json_encode(array("ERROR" => "No se pudo encontrar la mesa vinculada al pedido"));
+                }               
             } else {
-                $payload = json_encode(array("ERROR" => "No se pudo encontrar el pedido buscado o fue cancelado"));
+                $payload = json_encode(array("ERROR" => "No se pudo encontrar el pedido buscado"));
             }
         } else {
-            $payload = json_encode(array("ERROR" => "El parámetro 'id' es obligatorio para cambiar el estado de un pedido. Si el pedido se pasa a 'en preparacion', también debe pasarse 'tiempoPreparacion'"));
+            $payload = json_encode(array("ERROR" => "El parametro 'id' o 'codigoPedido' es obligatorio"));
         }
         
         $response -> getBody() -> write($payload);
@@ -170,18 +214,22 @@ class PedidoController implements IApiUsable {
     }
 
     public function TraerUno($request, $response, $args) {
-        if (Validadores::ValidarParametros($args, ["id"])) {
-            $pedido = Pedido::ObtenerPorID($args["id"], true);
+
+        if(isset($args["id"])) {
+
+            $idPedido = $args["id"];
+            $pedido = Pedido::ObtenerPorID($idPedido);
 
             if ($pedido) {
+
                 $payload = json_encode(array("Pedido" => $pedido));
             } else {
-                $payload = json_encode(array("ERROR" => "El pedido con el id {$args["id"]} no existe o fue cancelado"));
+
+                $payload = json_encode(array("ERROR" => "El pedido con el id {$idPedido} no existe o fue cancelado"));
             }
         } else {
-            $payload = json_encode(array("ERROR" => "El parámetro 'id' es obligatorio para traer un pedido"));
+            $payload = json_encode(array("ERROR" => "El parametro 'id' es obligatorio"));
         }
-        
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
     }
@@ -189,46 +237,74 @@ class PedidoController implements IApiUsable {
 	public function EliminarUno($request, $response, $args) {
         $parametros = $request -> getParsedBody ();
 
-        if (Validadores::ValidarParametros($args, ["id"])) {
+        if(isset($parametros["id"])) {
+
+            $idPedido = $parametros["id"];
             $payload = json_encode(array("ERROR" => "Hubo un error al cambiar el estado"));
-            $pedido = Pedido::ObtenerPorID($args["id"], true);
+            $pedido = Pedido::ObtenerPorID($idPedido);
             if ($pedido) {
+
                 $nuevoEstado = "cancelado";
-                if (Pedido::CambiarEstado($args["id"], $nuevoEstado)) {
-                    $payload = json_encode(array("Resultado" => "El pedido con el id {$args["id"]} fue cancelado"));
+                if ($pedido->CambiarEstado($nuevoEstado, false)) {
+
+                    $payload = json_encode(array("Resultado" => "El pedido con el id {$idPedido} fue cancelado"));
                 }       
             } else {
-            $payload = json_encode(array("ERROR" => "El pedido con el id {$args["id"]} no existe o ya fue cancelado"));
+
+            $payload = json_encode(array("ERROR" => "No se encontro el pedido con el id {$idPedido}"));
             }
         } else {
-            $payload = json_encode(array("ERROR" => "El parámetro 'sector' es obligatorio para traer los pedidos por sector. Si el pedido se pasa a 'en preparacion', también debe pasarse 'tiempoPreparacion'"));
+
+            $payload = json_encode(array("ERROR" => "El parametro 'id' es obligatorio"));
         }
-        
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
     }
 
 	public function ModificarUno($request, $response, $args) {
+        $modificado = false;
         $parametros = $request -> getParsedBody ();
 
-        if (Validadores::ValidarParametros($parametros, [ "id", "idProducto", "nombreCliente" ])) {
-            $pedido = Pedido::ObtenerPorID($parametros["id"], true);
-            $producto = Producto::ObtenerPorID($parametros["idProducto"], true);
-            if ($pedido && $producto) {
-                $pedido -> idProducto = $parametros["idProducto"];
-                $pedido -> nombreCliente = $parametros["nombreCliente"];
-                if ($pedido -> Modificar()) {
-                    $payload = json_encode(array("Pedido modificado:" => $pedido));
+        if (isset($parametros["id"]) && (isset($parametros["idProducto"]) || isset($parametros["nombreCliente"]))) {
+
+            $idPedido = $parametros["id"];
+            $pedido = Pedido::ObtenerPorID($idPedido);
+            if($pedido){
+
+                if(isset($parametros["idProducto"])) {
+
+                    $idProducto = $parametros["idProducto"];
+                    $producto = Producto::ObtenerPorID($idProducto);
+                    if($producto) {
+
+                        $pedido->idProducto = $producto->id;
+                        $pedido->Modificar();
+                        $modificado = true;
+
+                    } else {
+                        $payload = json_encode(array("ERROR" => "No se pudo encontrar el producto indicado"));
+                    }
                 } else {
-                    $payload = json_encode(array("ERROR" => "No se pudo modificar el pedido"));
+
+                    $nombreCliente = $parametros["nombreCliente"];
+                    $pedido->nombreCliente = $nombreCliente;
+                    $pedido->Modificar();
+                    $modificado = true;
+                }
+                
+                if ($modificado) {
+
+                        $payload = json_encode(array("MODIFICADO" => $pedido));
+                }else {
+
+                    $payload = json_encode(array("ERROR" => "No se pudo hacer la modificacion"));
                 }
             } else {
-                $payload = json_encode(array("ERROR" => "Tanto el pedido como el producto deben existir y estar activos para realizar la modificación"));
+                $payload = json_encode(array("ERROR" => "No se encontró el pedido con {$idPedido}"));
             }
         } else {
-            $payload = json_encode(array("ERROR" => "El parámetro 'id' es obligatorio para modificar un pedido"));
+            $payload = json_encode(array("ERROR" => "El parametro 'id' y el parametro 'idProducto' o 'nombreCliente' es obligatorio para modificar un pedido"));
         }
-        
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
     }

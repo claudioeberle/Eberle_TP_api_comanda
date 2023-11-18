@@ -116,7 +116,7 @@ class UsuarioController implements IApiUsable {
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-    public function BorrarUno($request, $response, $args) {
+    public function EliminarUno($request, $response, $args) {
         if (isset($args[ "id" ])) {
         
             $resultado = Usuario::Eliminar($args["id"]);

@@ -1,6 +1,7 @@
 <?php
 
 require_once './db/AccesoDatos.php';
+require_once '../Utils/utiles.php';
 
 class Mesa {
 
@@ -10,12 +11,21 @@ class Mesa {
     public $pedidos;
     public $fecha;
 
-    public function __construct($id, $estado, $codigoMesa, $fecha) {
+    public function __construct($id = false, $estado = false, $codigoMesa, $fecha) {
 
-        $this -> id = $id;
-        $this -> estado = "cerrada";
+        if($id === false){
+            $this->id = -1;
+        } else {
+            $this->id = $id;
+        }
+
+        if($estado === false){
+            $this -> estado = "cerrada";
+        } else {
+            $this -> estado = $estado;
+        }
+        $this->fecha = $fecha;
         $this -> codigoMesa = $codigoMesa;
-        $this -> fecha = $fecha;
         $this -> pedidos = array();
     }
 
@@ -23,14 +33,14 @@ class Mesa {
     public function GuardarMesa() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO MESAS (estado, codigoMesa, fecha) VALUES (:estado, :codigoMesa, :fecha)");
+        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO mesas (estado, codigoMesa, fecha) VALUES (:estado, :codigoMesa, :fecha)");
         $consulta -> bindParam(":estado", $this -> estado);
         $consulta -> bindParam(":codigoMesa", $this -> codigoMesa);
         $consulta -> bindParam(":fecha", $this -> fecha);
 
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $objetoAccesoDatos -> ObtenerUltimoId();
+            $retorno = $this -> codigoMesa;
         }
         return $retorno;
     }
@@ -38,7 +48,7 @@ class Mesa {
     public static function ObtenerTodasLasMesas() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $query = "SELECT * FROM MESAS";
+        $query = "SELECT * FROM mesas";
         $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -75,12 +85,12 @@ class Mesa {
 
     public function CambiarEstado($nuevoEstado) {
         $retorno = false;
-        if ($this -> estado != $nuevoEstado) {
-            $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-            $consulta = $objetoAccesoDatos -> PrepararConsulta("UPDATE mesas SET estado = :nuevoEstado WHERE id = :id");
-            $consulta -> bindParam(':nuevoEstado', $nuevoEstado);
-            $consulta -> bindParam(':id', $this -> id);
-            $retorno = $consulta -> execute();
+        //*“con cliente esperando pedido” ,”con cliente comiendo”,“con cliente pagando” y “cerrada”.
+        if($nuevoEstado === "con cliente esperando pedido" || $nuevoEstado === "con cliente comiendo" 
+        || $nuevoEstado === "con cliente pagando" || $nuevoEstado === "cerrada"){
+
+            $this->estado = $nuevoEstado;
+            $retorno = $this->Modificar();
         }
         return $retorno;
     }
@@ -103,6 +113,80 @@ class Mesa {
 
         $this->pedidos = MesaPedidos::ObtenerPedidosDeUnaMesa($this->id);
     }
+
+    public function Modificar() {
+        $retorno = false;
+        $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
+        $consulta = $objetoAccesoDatos -> PrepararConsulta("UPDATE mesas SET estado = :estado WHERE id = :id");
+        $consulta -> bindParam(':id', $this -> id);
+        $consulta -> bindParam(':estado', $this -> estado);
+
+        $resultado = $consulta -> execute();
+        if ($resultado) {
+            $retorno = true;
+        }
+        return $retorno;
+    }
+
+    public function AgregarPedido($idPedido){
+
+        $retorno = false;
+        $relacionMesaPedido = new MesaPedidos($this->id, $idPedido);
+        if($relacionMesaPedido->Guardar()){
+            $retorno = true;
+        }
+        return $retorno;
+    }
+
+    public static function AsignarCodigoMesa(){
+
+        $reintentos = 0;
+
+        $ruta = '../db/codigosMesa.csv';
+        do{
+            $codigo = Utiles::ObtenerCodigoAlfaNumAleatorio(5);
+            $reintentos = $reintentos + 1;
+
+        }while((Utiles::ValidarExistenciaCodigo($codigo, $ruta) || $codigo === "") && $reintentos < 5);
+
+        if($reintentos >= 5){
+            $codigo = false;
+        } else {
+            Utiles::GuardarCodigoEnCSV($codigo, $ruta);
+        }
+        return $codigo;
+    }
+
+    public function HayPedidosPendientes(){
+
+        $retorno = false;
+        $this->ActualizarListaPedidos();
+        foreach($this->pedidos as $pedido){
+            if($pedido->estado === 'pendiente' || $pedido->estado === 'en preparacion' || $pedido->estado === 'listo para servir'){
+                $retorno = true;
+                break;
+            }
+        }
+        return $retorno;
+    }
+
+    public function ObtenerPedidosPendientes(){
+
+        $retorno = false;
+        $pedidosPendientes = array();
+        $this->ActualizarListaPedidos();
+        foreach($this->pedidos as $pedido){
+            if($pedido->estado === 'pendiente' || $pedido->estado === 'en preparacion' || $pedido->estado === 'listo para servir'){
+                array_push($pedidosPendientes, $pedido);
+            }
+        }
+
+        if(count($pedidosPendientes) > 0){
+            $retorno = $pedidosPendientes;
+        }
+        return $retorno;
+    }
+
 }
 
 ?>
