@@ -98,6 +98,53 @@ class Producto {
         }
         return $retorno;
     }
+
+    public static function GuardarEnCSV() {
+        $retorno = false;
+
+        $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("SELECT * FROM productos");
+        $resultado = $consulta -> execute();
+
+        if ($resultado) {
+            $arrayObtenido = array();
+            $productos = array();
+            $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
+            foreach($arrayObtenido as $producto){
+                $productoAux = new Producto($producto->id, $producto->nombre, $producto->tipo, $producto->sector, $producto->precio);
+                $productos[] = $productoAux;
+            }
+            $fecha = (new DateTime())->format('Y_m_d_H_i_s');
+            $ruta = sys_get_temp_dir() . "\listaProductos_{$fecha}.csv";
+            var_dump($ruta);
+            $archivo = fopen($ruta, "w");
+            foreach ($productos as $producto) {
+                fputcsv($archivo, (array)$producto);
+            }
+            fclose($archivo);
+            $retorno = $ruta;
+        }
+        return $retorno;
+    }
+
+    public static function CargarDesdeCSV($rutaArchivo) {
+        $retorno = false;
+        $listaProductos = array();
+
+        if (file_exists($rutaArchivo)) {   
+            $archivo = fopen($rutaArchivo, "r");
+            while (($linea = fgets($archivo)) !== false) {
+
+                $productosArray = explode(',', $linea);
+                $producto = new Producto(0, $productosArray[0], $productosArray[1], $productosArray[2], $productosArray[3]);
+                $producto -> GuardarProducto();  
+            }
+            $retorno = true;
+            fclose($archivo);
+        }
+        return $retorno;
+    }
+
 }
 
 ?>

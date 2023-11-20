@@ -137,19 +137,20 @@ class Usuario {
         return $retorno;
     }
     
-    public static function Login($email, $clave) {
-        $retorno = false;
+    public static function Login($email, $password) {
+        $retorno = "Revise los datos ingresados";
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> RetornarConsulta("SELECT * FROM usuarios WHERE email = :email AND activo = TRUE");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("SELECT * FROM usuarios WHERE email = :email AND activo = true");
         $consulta -> bindParam(':email', $email);
         $resultado = $consulta -> execute();
 
-        if ($resultado && $consulta -> rowCount() > 0) {
-            $usuario = $consulta -> fetchObject('Usuario');
-            if ($clave === $usuario -> clave) {
-                $retorno = "Login Exitoso";
-            } else {
-                $retorno = "Login fallido - Revise los datos ingresados";
+        if ($resultado) {
+            $usuarioObtenido = $consulta->fetchObject();
+            if($usuarioObtenido){
+                $usuario = new Usuario($usuarioObtenido->id, $usuarioObtenido->nombre, $usuarioObtenido->apellido, $usuarioObtenido->dni, $usuarioObtenido->email , $usuarioObtenido->password , $usuarioObtenido->puesto , $usuarioObtenido->sector , $usuarioObtenido->activo);
+                if ($usuario && $password === $usuario -> password) {
+                    $retorno = $usuario;
+                }
             }
         } else {
             $retorno = "El email no se encuentra registrado o el usuario fue dado de baja";

@@ -123,6 +123,41 @@ class ProductoController implements IApiUsable {
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
     }
+
+    public function DescargarCSV($request, $response, $args){
+
+        $resultado = Producto::GuardarEnCSV();
+
+        if ($resultado) {
+            $response = $response->withHeader('Content-Type', 'text/csv');
+            $response = $response->withHeader('Content-Disposition', 'attachment; filename="' . basename($resultado) . '"');
+            $response = $response->withHeader('Content-Length', filesize($resultado));
+            readfile($resultado);
+
+            $payload = json_encode(array("Resultado" => "Archivo descargado con éxito"));
+        } else {
+            $payload = json_encode(array("ERROR" => "Error al descargar el archivo"));
+            $response = $response->withHeader('Content-Type', 'application/json');
+        }
+
+        return $response->withStatus(200)->withHeader('Content-Type', 'application/json')->write($payload);
+    }
+
+    public function CargarCSV($request, $response, $args) {
+
+        $archivosCliente = $request -> getUploadedFiles();
+        $archivo = $archivosCliente["listaProductos"];
+        $payload = json_encode(array("ERROR" => "Hubo un error en la carga del archivo CSV de productos"));
+
+        if ($archivo -> getError() === UPLOAD_ERR_OK) {
+            if (Producto::CargarDesdeCSV($archivo -> getFilePath())) {
+                $payload = json_encode(array("Resultado" => "El archivo de productos ha sido cargado con éxito en la base de datos"));
+            };
+        }
+        
+        $response -> getBody() -> write($payload);
+        return $response->withHeader('Content-Type', 'application/json');
+    }
 }
 
 ?>

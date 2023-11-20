@@ -151,7 +151,7 @@ class Mesa {
 
         $reintentos = 0;
 
-        $ruta = './db/codigosMesa.csv';
+        $ruta = 'C:\xampp\htdocs\zz-api-comanda\app\/db/codigosMesa.csv';
         do{
             $codigo = Utiles::ObtenerCodigoAlfaNumAleatorio(5);
             $reintentos = $reintentos + 1;
@@ -161,7 +161,8 @@ class Mesa {
         if($reintentos >= 5){
             $codigo = false;
         } else {
-            Utiles::GuardarCodigoEnCSV($codigo, $ruta);
+            $retorno = Utiles::GuardarCodigoEnCSV($codigo, $ruta);
+            var_dump($retorno);
         }
         return $codigo;
     }
