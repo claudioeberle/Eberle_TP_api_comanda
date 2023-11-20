@@ -136,10 +136,14 @@ class Producto {
             while (($linea = fgets($archivo)) !== false) {
 
                 $productosArray = explode(',', $linea);
-                $producto = new Producto(0, $productosArray[0], $productosArray[1], $productosArray[2], $productosArray[3]);
-                $producto -> GuardarProducto();  
+                if(count($productosArray) === 5){
+
+                    $producto = new Producto($productosArray[0], $productosArray[1], $productosArray[2], $productosArray[3], $productosArray[4]);
+                    if($producto -> GuardarProducto()){
+                        $retorno = true;
+                    }
+                }
             }
-            $retorno = true;
             fclose($archivo);
         }
         return $retorno;

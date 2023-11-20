@@ -148,15 +148,21 @@ class ProductoController implements IApiUsable {
     public function CargarCSV($request, $response, $args) {
 
         $archivosCliente = $request -> getUploadedFiles();
+        if(key_exists("listaProductos",$archivosCliente)){
         $archivo = $archivosCliente["listaProductos"];
-        $payload = json_encode(array("ERROR" => "Hubo un error en la carga del archivo CSV de productos"));
 
-        if ($archivo -> getError() === UPLOAD_ERR_OK) {
-            if (Producto::CargarDesdeCSV($archivo -> getFilePath())) {
-                $payload = json_encode(array("Resultado" => "El archivo de productos ha sido cargado con éxito en la base de datos"));
-            };
+            $payload = json_encode(array("ERROR" => "Hubo un error en la carga del archivo CSV de productos"));
+            if ($archivo -> getError() === UPLOAD_ERR_OK) {
+                if (Producto::CargarDesdeCSV($archivo -> getFilePath())) {
+                    $payload = json_encode(array("Resultado" => "El archivo de productos ha sido cargado con éxito en la base de datos"));
+                } else {
+                    $payload = json_encode(array("ERROR" => "No se pudo cargar el archivo. Revise los datos"));
+                }
+            }
+        } else {
+
+            $payload = json_encode(array("ERROR" => "El parametro listaProductos con la carga del archivo es indispensable"));
         }
-        
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
     }
