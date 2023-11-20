@@ -9,29 +9,16 @@ class UsuarioController implements IApiUsable {
 
         $parametros = $request -> getParsedBody();
 
-        if (!isset($parametros["nombre"]) || !isset($parametros["apellido"]) || !isset($parametros["dni"]) || !isset($parametros["email"]) || !isset($parametros["password"]) || !isset($parametros["puesto"])) {
+        if (!isset($parametros["nombre"]) || !isset($parametros["apellido"]) || !isset($parametros["dni"]) || !isset($parametros["email"]) || !isset($parametros["password"]) || !isset($parametros["puesto"]) || !isset($parametros["sector"])) {
 
             $payload = json_encode(array("ERROR" => "Los parámetros obligatorios para cargar un nuevo usuario son: nombre, apellido, dni, email, password, puesto, sector"));
 
         } else {
 
             $resultado = false;
-    
-            if ($parametros["puesto"] === 'mozo' && $parametros["puesto"] === 'socio') {
-                
-                $usuario = new Usuario($parametros['nombre'], $parametros['apellido'], $parametros['dni'], $parametros['email'], $parametros['clave'], $parametros['puesto'], "", true);
-                $resultado = $usuario -> GuardarUsuario();
-                
-            } else if(isset($parametros["puesto"])){
-
-                $usuario = new Usuario($parametros['nombre'], $parametros['apellido'], $parametros['dni'], $parametros['email'], $parametros['clave'], $parametros['puesto'], $parametros['sector']);
-                $resultado = $usuario -> GuardarUsuario();
-            }
-            else{
-
-                $payload = json_encode(array("ERROR" => "El parametro sector es obligatorio"));
-            }
-    
+            $usuario = new Usuario(0, $parametros['nombre'], $parametros['apellido'], $parametros['dni'], $parametros['email'], $parametros['password'], $parametros['puesto'], $parametros['sector'], true);
+            $resultado = $usuario -> GuardarUsuario();
+            
             if (is_numeric($resultado)) {
 
                 $payload = json_encode(array("Resultado" => "Se ha creado con éxito un usuario con el ID {$resultado}"));
@@ -41,7 +28,6 @@ class UsuarioController implements IApiUsable {
                 $payload = json_encode(array("ERROR" => "Hubo un error durante el alta del nuevo usuario"));
             }
         }
-    
         $response -> getBody() -> write($payload);
         return $response -> withHeader('Content-Type', 'application/json');
     }
@@ -68,7 +54,7 @@ class UsuarioController implements IApiUsable {
 
             $lista = Usuario::ObtenerUsuariosPorPuesto($args["puesto"], true);
 
-            if (is_array($lista)) {
+            if ($lista) {
 
                 $payload = json_encode(array("Lista" => $lista));
 
@@ -87,7 +73,7 @@ class UsuarioController implements IApiUsable {
     }
 
     public function TraerUno($request, $response, $args) {
-        if (isset($args[ "dni" ])) {
+        if (isset($args["dni"])) {
 
             $usuario = Usuario::ObtenerPorDNI($args["dni"], true);
 
@@ -123,11 +109,11 @@ class UsuarioController implements IApiUsable {
 
             if ($resultado) {
 
-                $payload = json_encode(array("Resultado" => `Se eliminó el usuario con el id {$args["id"]}`));
+                $payload = json_encode(array("Resultado" => "Se eliminó el usuario con el id {$args["id"]}"));
 
             } else {
 
-                $payload = json_encode(array("ERROR" => `No seencontró el usuario con el id {$args["id"]}`));
+                $payload = json_encode(array("ERROR" => "No seencontró el usuario con el id {$args["id"]}"));
             }
         } 
         else {
@@ -140,50 +126,35 @@ class UsuarioController implements IApiUsable {
     }
 
 	public function ModificarUno($request, $response, $args) {
-        $parametros = $request -> getParsedBody ();
+        $parametros = $request -> getParsedBody();
 
-        if (!isset($parametros["id"]) || !isset($parametros["nombre"]) || !isset($parametros["apellido"]) || !isset($parametros["dni"]) || !isset($parametros["email"]) || !isset($parametros["password"]) || !isset($parametros["puesto"])) {
+        if (isset($parametros["id"]) || isset($parametros["nombre"]) || isset($parametros["apellido"]) 
+        || isset($parametros["dni"]) || isset($parametros["email"]) || isset($parametros["password"]) 
+        || isset($parametros["puesto"]) || isset($parametros["sector"])) {
 
-            $usuario = Usuario::ObtenerPorID($parametros["id"], true);
+            $usuario = Usuario::ObtenerPorID($parametros["id"], false);
 
             if ($usuario) {
 
-                $nuevoPuestoUsuario = $parametros["puesto"];
+                $usuario -> nombre = $parametros["nombre"];                
+                $usuario -> apellido = $parametros["apellido"];                
+                $usuario -> dni = $parametros["dni"];                
+                $usuario -> email = $parametros["email"];                
+                $usuario -> puesto = $parametros["puesto"];
+                $usuario -> sector = $parametros["sector"];
 
-                if ($nuevoPuestoUsuario === 'mozo' || $nuevoPuestoUsuario === 'socio') {
+                if ($usuario -> Modificar()) {
 
-                    $usuario -> sector = " ";
+                    $payload = json_encode(array("Usuario modificado:" => $usuario));
+                } else {
 
-                } else if ($nuevoPuestoUsuario != 'mozo' && $nuevoPuestoUsuario != 'socio') {
-
-                    if (!isset($parametros["sector"])) {
-
-                        $usuario -> sector = $parametros["sector"];
-
-                    } else {
-
-                        $payload = json_encode(array("ERROR" => "Se debe especificar un sector si el empleado no es un mozo o un socio"));
-                    }
-                }
-
-                if (!isset($payload)) {
-
-                    $usuario -> nombre = $parametros["nombre"];                
-                    $usuario -> apellido = $parametros["apellido"];                
-                    $usuario -> dni = $parametros["dni"];                
-                    $usuario -> email = $parametros["email"];                
-                    $usuario -> puesto = $parametros["puesto"];
-                    if ($usuario -> Modificar()) {
-                        $payload = json_encode(array("Usuario modificado:" => $usuario));
-                    } else {
-                        $payload = json_encode(array("ERROR" => "No se pudo modificar el usuario"));
-                    }
+                    $payload = json_encode(array("ERROR" => "No se pudo modificar el usuario"));
                 }
             } else {
-                $payload = json_encode(array("ERROR" => "No se pudo encontrar al usuario para realizar la modificación"));
+                $payload = json_encode(array("ERROR" => "No se pudo encontrar al usuario para realizar la modificacion"));
             }
         } else {
-            $payload = json_encode(array("ERROR" => "El parámetro 'id', 'nombre', 'apellido', 'dni', 'email' y 'puesto' son obligatorios para modificar un usuario"));
+            $payload = json_encode(array("ERROR" => "El parametro 'id', 'nombre', 'apellido', 'dni', 'email', 'passwpord', 'puesto' y sector son obligatorios para modificar un usuario"));
         }
         
         $response -> getBody() -> write($payload);

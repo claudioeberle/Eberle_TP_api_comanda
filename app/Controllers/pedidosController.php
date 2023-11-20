@@ -1,7 +1,7 @@
 <?php
 
-require_once '../Models/pedido.php';
-require_once '../Interfaces/IApiUsable.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/pedido.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Interfaces/IApiUsable.php';
 
 class PedidoController implements IApiUsable {
 
@@ -11,7 +11,7 @@ class PedidoController implements IApiUsable {
 
         //$codigoMesa, $idProducto, $nombreCliente, $estado, $fecha
 
-         if (isset($parametros["codigoMesa"]) && isset($parametros["idProducto"]) && isset($parametros["nombreCliente"]) && isset($parametros["estado"])) { 
+         if (isset($parametros["codigoMesa"]) && isset($parametros["idProducto"]) && isset($parametros["nombreCliente"])) { 
 
             $codigoMesa = $parametros["codigoMesa"];
             $idProducto = $parametros["idProducto"];
@@ -26,9 +26,10 @@ class PedidoController implements IApiUsable {
                 //$fotoMesa = $request -> getUploadedFiles()['foto'];
                 //self::SubirFotoMesa($codigo, $fotoMesa);
                 
-                $pedido = new Pedido($codigoMesa, $idProducto, $nombreCliente);
+                $pedido = new Pedido(0, $codigoMesa, $idProducto, $nombreCliente, false, false, false, new DateTime());
                 if($pedido->codigoPedido !== false){
                     $resultado = $pedido -> GuardarPedido();
+                    $pedido = Pedido::ObtenerPorCodigoPedido($resultado);
                     $mesa -> CambiarEstado("con cliente esperando pedido");
                     $mesa->AgregarPedido($pedido->id);
 
@@ -76,7 +77,7 @@ class PedidoController implements IApiUsable {
 
         if (isset($args["codigoPedido"])) {
 
-            $codigo = $args["codigoIdentificacion"];
+            $codigo = $args["codigoPedido"];
             $pedido = Pedido::ObtenerPorCodigoPedido($codigo);
 
             if ($pedido !== false) {
@@ -89,7 +90,7 @@ class PedidoController implements IApiUsable {
             }
         } else {
 
-            $payload = json_encode(array("ERROR" => "El parámetro 'codigoPedido' es obligatorio."));
+            $payload = json_encode(array("ERROR" => "El parametro 'codigoPedido' es obligatorio."));
         }
 
         $response -> getBody() -> write($payload);
@@ -121,7 +122,7 @@ class PedidoController implements IApiUsable {
 
             if (is_array($listaPedidos)) {
 
-                $payload = json_encode(array("Lista" => json_encode($listaPedidos)));
+                $payload = json_encode(array("Lista" => $listaPedidos));
 
             } else if(count($listaPedidos) === 0){
 

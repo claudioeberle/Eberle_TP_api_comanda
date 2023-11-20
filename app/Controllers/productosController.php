@@ -14,12 +14,12 @@ class ProductoController implements IApiUsable {
 
         } else {
 
-            $producto = new Producto($parametros['nombre'], $parametros['tipo'], $parametros['sector'], $parametros['precio']);
+            $producto = new Producto(0, $parametros['nombre'], $parametros['tipo'], $parametros['sector'], $parametros['precio']);
             $resultado = $producto -> GuardarProducto();
 
             if (is_numeric($resultado)) {
 
-                $payload = json_encode(array("Resultado" => "Se ha creado con éxito el producto"));
+                $payload = json_encode(array("Resultado" => "Se ha creado con éxito el producto '{$producto->nombre}'"));
 
             } else {
 

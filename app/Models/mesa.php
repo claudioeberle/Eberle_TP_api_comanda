@@ -1,7 +1,7 @@
 <?php
 
 require_once './db/AccesoDatos.php';
-require_once '../Utils/utiles.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Utils/utiles.php';
 
 class Mesa {
 
@@ -11,7 +11,7 @@ class Mesa {
     public $pedidos;
     public $fecha;
 
-    public function __construct($id = false, $estado = false, $codigoMesa, $fecha) {
+    public function __construct($id, $estado, $codigoMesa, $fecha) {
 
         if($id === false){
             $this->id = -1;
@@ -29,14 +29,13 @@ class Mesa {
         $this -> pedidos = array();
     }
 
-
     public function GuardarMesa() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO mesas (estado, codigoMesa, fecha) VALUES (:estado, :codigoMesa, :fecha)");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO mesas (estado, codigoMesa, fecha) VALUES (:estado, :codigoMesa, :fecha)");
         $consulta -> bindParam(":estado", $this -> estado);
         $consulta -> bindParam(":codigoMesa", $this -> codigoMesa);
-        $consulta -> bindParam(":fecha", $this -> fecha);
+        $consulta -> bindParam(":fecha", $this -> fecha->format('Y-m-d H:i:s'));
 
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -49,23 +48,31 @@ class Mesa {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "SELECT * FROM mesas";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
-        $resultado = $consulta -> execute();
-        if ($resultado) {
-            $retorno = $consulta -> fetchAll(PDO::FETCH_CLASS, 'Mesa');
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
+        $consulta -> execute();
+        $arrayObtenido = array();
+        $mesas = array();
+        $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
+        foreach($arrayObtenido as $i){
+            $mesa = new Mesa($i->id, $i->estado, $i->codigoMesa, $i->fecha);
+            $mesas[] = $mesa;
         }
-        return $retorno;
+        return $mesas;
     }
 
     public static function ObtenerPorID($id) {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "SELECT * FROM mesas WHERE id = :id";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':id', $id);
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $consulta -> fetchObject('Mesa');
+            $mesaObtenida = $consulta->fetchObject();
+            if($mesaObtenida){
+                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha);
+                $retorno = $mesa;
+            }
         }
         return $retorno;
     }
@@ -74,11 +81,15 @@ class Mesa {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "SELECT * FROM mesas WHERE codigoMesa = :codigoMesa";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':codigoMesa', $codigoMesa);
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $consulta -> fetchObject('Mesa');
+            $mesaObtenida = $consulta->fetchObject();
+            if($mesaObtenida){
+                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha);
+                $retorno = $mesa;
+            }
         }
         return $retorno;
     }
@@ -98,14 +109,12 @@ class Mesa {
     public static function Eliminar($id) {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("DELETE mesas WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("DELETE from mesas WHERE id = :id");
         $consulta -> bindParam(':id', $id);
         $resultado = $consulta -> execute();
-
         if ($resultado) {
             $retorno = true;
         }
-
         return $retorno;
     }
 
@@ -117,7 +126,7 @@ class Mesa {
     public function Modificar() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("UPDATE mesas SET estado = :estado WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE mesas SET estado = :estado WHERE id = :id");
         $consulta -> bindParam(':id', $this -> id);
         $consulta -> bindParam(':estado', $this -> estado);
 
@@ -142,7 +151,7 @@ class Mesa {
 
         $reintentos = 0;
 
-        $ruta = '../db/codigosMesa.csv';
+        $ruta = './db/codigosMesa.csv';
         do{
             $codigo = Utiles::ObtenerCodigoAlfaNumAleatorio(5);
             $reintentos = $reintentos + 1;

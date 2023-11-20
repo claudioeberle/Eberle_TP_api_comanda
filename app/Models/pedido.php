@@ -1,7 +1,8 @@
 <?php
 
-require_once '../db/accesoDatos.php';
-require_once '../Utils/utiles.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/mesaPedidos.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/db/accesoDatos.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Utils/utiles.php';
 
 
 
@@ -37,9 +38,11 @@ class Pedido {
         } else{
             $this -> tiempoPreparacion = false;
         }
-        if($fecha){
+        if($fecha && is_string($fecha)){
+            $this -> fecha = new DateTime($fecha);
+        } else if($fecha){
             $this -> fecha = $fecha;
-        } else{
+        } else {
             $this -> fecha = new DateTime();
         }
     }
@@ -47,14 +50,14 @@ class Pedido {
     public function GuardarPedido() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO pedidos (codigoMesa, idProducto, nombreCliente, codigoPedido, estado, tiempoPreparacion, fecha) VALUES (:codigoMesa, :idProducto, :nombreCliente, :codigoPedido, :estado, :tiempoPreparacion, :fecha)");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO pedidos (codigoMesa, idProducto, nombreCliente, codigoPedido, estado, tiempoPreparacion, fecha) VALUES (:codigoMesa, :idProducto, :nombreCliente, :codigoPedido, :estado, :tiempoPreparacion, :fecha)");
         $consulta -> bindParam(':codigoMesa', $this -> codigoMesa);
         $consulta -> bindParam(':idProducto', $this -> idProducto);
         $consulta -> bindParam(':nombreCliente', $this -> nombreCliente);
         $consulta -> bindParam(':codigoPedido', $this -> codigoPedido);
         $consulta -> bindParam(':estado', $this -> estado);
         $consulta -> bindParam(':tiempoPreparacion', $this -> tiempoPreparacion);
-        $consulta -> bindParam(':fecha', $this -> fecha);
+        $consulta -> bindParam(':fecha', $this -> fecha->format('Y-m-d H:i:s'));
         $resultado = $consulta -> execute();
 
         if ($resultado) {
@@ -67,7 +70,7 @@ class Pedido {
     public function Modificar() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("UPDATE pedidos SET idProducto = :idProducto, nombreCliente = :nombreCliente WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE pedidos SET idProducto = :idProducto, nombreCliente = :nombreCliente WHERE id = :id");
         $consulta -> bindParam(':id', $this -> id);
         $consulta -> bindParam(':idProducto', $this -> idProducto);
         $consulta -> bindParam(':nombreCliente', $this -> nombreCliente);
@@ -83,10 +86,17 @@ class Pedido {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "SELECT * FROM pedidos";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $consulta -> fetchAll(PDO::FETCH_CLASS, 'Pedido');
+            $arrayObtenido = array();
+            $pedidos = array();
+            $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
+            foreach($arrayObtenido as $aux){
+                $pedido = new Pedido($aux->id, $aux->codigoMesa, $aux->idProducto, $aux->nombreCliente, $aux->codigoPedido, $aux->estado, $aux->tiempoPreparacion, $aux->fecha);
+                $productos[] = $pedido;
+            }
+            $retorno = $productos;
         }
         return $retorno;
     }
@@ -95,11 +105,15 @@ class Pedido {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "SELECT * FROM pedidos WHERE id = :id";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':id', $id);
         $resultado = $consulta -> execute();
-        if ($resultado && $consulta -> rowCount() > 0) {
-            $retorno = $consulta -> fetchObject('Pedido');
+        if ($resultado) {
+            $aux = $consulta->fetchObject();
+            if($aux){
+                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->idProducto, $aux->nombreCliente, $aux->codigoPedido, $aux->estado, $aux->tiempoPreparacion, $aux->fecha);
+                $retorno = $nuevoPedido;
+            }
         }
         return $retorno;
     }
@@ -107,7 +121,7 @@ class Pedido {
     public static function ObtenerUltimoPedidoPorMesa($codigoMesa) {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("SELECT * FROM pedidos WHERE codigoMesa = :codigoMesa ORDER BY fecha DESC LIMIT 1");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("SELECT * FROM pedidos WHERE codigoMesa = :codigoMesa ORDER BY fecha DESC LIMIT 1");
         $consulta -> bindParam(':codigoMesa', $codigoMesa);
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -120,11 +134,15 @@ class Pedido {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "SELECT * FROM pedidos WHERE codigoPedido = :codigoPedido";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':codigoPedido', $codigoPedido);
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $consulta -> fetchAll(PDO::FETCH_CLASS, 'Pedido');
+            $aux = $consulta->fetchObject();
+            if($aux){
+                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->idProducto, $aux->nombreCliente, $aux->codigoPedido, $aux->estado, $aux->tiempoPreparacion, $aux->fecha);
+                $retorno = $nuevoPedido;
+            }
         }
         return $retorno;
     }
@@ -150,6 +168,10 @@ class Pedido {
 
                         $retorno['mensaje'] = "Su pedido ya está listo. Se lo servirán en un momento";
 
+                    } else if($pedido->estado === 'entregado'){
+
+                        $retorno['mensaje'] = "Su pedido ya fue entregado";
+
                     } else {
 
                         $retorno['mensaje'] = "Se pedido aún no ha sido asignado - Intente en unos minutos";
@@ -162,7 +184,7 @@ class Pedido {
 
                         } else {
 
-                            $retorno['mensaje'] = "Faltan" . $tiempoFaltante . "minutos para que este listo";
+                            $retorno['mensaje'] = "Faltan " . $tiempoFaltante . " minutos para que este listo";
                         }
                     }
                 } else {
@@ -212,9 +234,9 @@ class Pedido {
         return $pedidosSector;
     }
 
-    private function ObtenerSector(){
+    public function ObtenerSector(){
         $sectorPedido = false;
-        $producto = Producto::TraerUnProducto_Id($this->idProducto);
+        $producto = Producto::ObtenerPorID($this->idProducto);
         if($producto !== false){
             $sectorPedido = $producto->sector;
         }
@@ -254,7 +276,7 @@ class Pedido {
 
         $reintentos = 0;
 
-        $ruta = '../db/codigosPedido.csv';
+        $ruta = './db/codigosPedido.csv';
         do{
             $codigo = Utiles::ObtenerCodigoAlfaNumAleatorio(5);
             $reintentos = $reintentos + 1;

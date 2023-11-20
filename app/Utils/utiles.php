@@ -5,7 +5,7 @@ class Utiles{
 
     public static function ObtenerCodigoAlfaNumAleatorio($tamaño){
 
-        $caracteres = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        $caracteres = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $codigo = '';
         if(is_int($tamaño)){
 

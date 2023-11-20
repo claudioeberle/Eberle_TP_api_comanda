@@ -1,8 +1,8 @@
 <?php
 
-require_once '../Models/mesa.php';
-require_once '../Models/pedido.php';
-require_once '../Interfaces/IApiUsable.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/mesa.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/pedido.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Interfaces/IApiUsable.php';
 
 class MesasController implements IApiUsable {
 
@@ -15,7 +15,7 @@ class MesasController implements IApiUsable {
             if($mesa){
                 $resultado = $mesa -> GuardarMesa();
                 if($resultado !== false){
-                    $payload = json_encode(array("Resultado" => "Se ha creado con éxito una mesa con el ID {$resultado}"));
+                    $payload = json_encode(array("Resultado" => "Se ha creado con éxito una mesa con el codigo: {$resultado}"));
                 } else {
                     $payload = json_encode(array("ERROR" => "Hubo un error durante la asignacion de codigo de mesa"));
                 }
@@ -32,7 +32,7 @@ class MesasController implements IApiUsable {
 
         if (is_array($lista)) {
 
-            $payload = json_encode(array("Lista" => json_encode($lista)));
+            $payload = json_encode(array("Mesas" => $lista));
         } else {
 
             $payload = json_encode(array("ERROR" => "Hubo un error al obtener todas las mesas"));
@@ -45,9 +45,9 @@ class MesasController implements IApiUsable {
 
         $parametros = $request -> getParsedBody();
 
-        if (isset($parametros["codigoMesa"])) {
+        if (isset($args["codigoMesa"])) {
 
-            $codigoMesa = $parametros["codigoMesa"];
+            $codigoMesa = $args["codigoMesa"];
             $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
 
             if ($mesa) {
@@ -56,7 +56,7 @@ class MesasController implements IApiUsable {
                 $payload = json_encode(array("ERROR" => "No se pudo encontrar una mesa con el codigo {$codigoMesa}"));
             }
         } else {
-            $payload = json_encode(array("ERROR" => "El parámetro 'codigoMesa' es obligatorio."));
+            $payload = json_encode(array("ERROR" => "El parametro 'codigoMesa' es obligatorio."));
         }
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
@@ -112,10 +112,16 @@ class MesasController implements IApiUsable {
 
     public function EliminarUno($request, $response, $args) {
 
+        $resultado = false;
+
         if (isset($args["codigoMesa"])) {
 
             $codigoMesa = $args["codigoMesa"];
-            $resultado = Mesa::Eliminar($codigoMesa);
+            $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
+            if($mesa){
+
+                $resultado = Mesa::Eliminar($mesa->id);
+            }
 
             if ($resultado) {
 
@@ -128,7 +134,6 @@ class MesasController implements IApiUsable {
 
             $payload = json_encode(array("ERROR" => "El parametro 'codigoMesa' es obligatorio para dar de baja una mesa"));
         }
-
         $response->getBody() -> write($payload);
         return $response -> withHeader('Content-Type', 'application/json');
     }

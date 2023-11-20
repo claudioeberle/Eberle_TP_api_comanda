@@ -1,6 +1,6 @@
 <?php
 
-require_once '..//db/accesoDatos.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\//db/accesoDatos.php';
 
 class Producto {
     public $id;
@@ -20,7 +20,7 @@ class Producto {
     public function GuardarProducto() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO productos (nombre, tipo, sector, precio) VALUES (:nombre, :tipo, :sector, :precio)");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO productos (nombre, tipo, sector, precio) VALUES (:nombre, :tipo, :sector, :precio)");
         $consulta->bindParam(':nombre', $this -> nombre);
         $consulta->bindParam(':tipo', $this -> tipo);
         $consulta->bindParam(':sector', $this -> sector);
@@ -28,7 +28,8 @@ class Producto {
 
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $objetoAccesoDatos -> ObtenerUltimoId();
+            
+            $retorno = $objetoAccesoDatos -> RetornarUltimoIdInsertado();
         }
         return $retorno;
     }
@@ -37,10 +38,17 @@ class Producto {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "SELECT * FROM productos";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $resultado = $consulta->execute();
         if ($resultado) {
-            $retorno = $consulta->fetchAll(PDO::FETCH_CLASS, 'Producto');
+            $arrayObtenido = array();
+            $productos = array();
+            $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
+            foreach($arrayObtenido as $producto){
+                $productoAux = new Producto($producto->id, $producto->nombre, $producto->tipo, $producto->sector, $producto->precio);
+                $productos[] = $productoAux;
+            }
+            $retorno = $productos;
         }
         return $retorno;
     }
@@ -49,11 +57,15 @@ class Producto {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "SELECT * FROM productos WHERE id = :id";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':id', $id);
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $consulta -> fetchObject('Producto');
+            $prod = $consulta->fetchObject();
+            if($prod){
+                $producto = new Producto($prod->id, $prod->nombre, $prod->tipo, $prod->sector, $prod->precio);
+                $retorno = $producto;
+            }
         }
         return $retorno;
     }
@@ -61,7 +73,7 @@ class Producto {
     public static function Eliminar($id) {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("DELETE FROM productos WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("DELETE FROM productos WHERE id = :id");
         $consulta -> bindParam(':id', $id);
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -73,7 +85,7 @@ class Producto {
     public function Modificar() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("UPDATE productos SET nombre = :nombre, tipo = :tipo, sector = :sector, precio = :precio WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE productos SET nombre = :nombre, tipo = :tipo, sector = :sector, precio = :precio WHERE id = :id");
         $consulta -> bindParam(':id', $this -> id);
         $consulta -> bindParam(':nombre', $this -> nombre);
         $consulta -> bindParam(':tipo', $this -> tipo);

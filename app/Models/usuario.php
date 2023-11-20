@@ -1,6 +1,6 @@
 <?php
 
-require_once '..//db/accesoDatos.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\//db/accesoDatos.php';
 
 class Usuario {
     public $id;
@@ -29,7 +29,7 @@ class Usuario {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $query = "INSERT INTO usuarios (nombre, apellido, dni, email, password, puesto, sector, activo) VALUES (:nombre, :apellido, :dni, :email, :password, :puesto, :sector, :activo)";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':nombre', $this -> nombre);
         $consulta -> bindParam(':apellido', $this -> apellido);
         $consulta -> bindParam(':dni', $this -> dni);
@@ -41,7 +41,7 @@ class Usuario {
 
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $objetoAccesoDatos -> ObtenerUltimoId();
+            $retorno = $objetoAccesoDatos -> RetornarUltimoIdInsertado();
         }
         return $retorno;
     }
@@ -54,10 +54,17 @@ class Usuario {
         } else {
             $query = "SELECT * FROM usuarios";
         }
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $consulta -> fetchAll(PDO::FETCH_CLASS, 'Usuario');
+            $arrayObtenido = array();
+            $usuarios = array();
+            $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
+            foreach($arrayObtenido as $usuario){
+                $usuarioAux = new Usuario($usuario->id, $usuario->nombre, $usuario->apellido, $usuario->dni, $usuario->email , $usuario->password , $usuario->puesto , $usuario->sector , $usuario->activo);
+                $usuarios[] = $usuarioAux;
+            }
+            $retorno = $usuarios;
         }
         return $retorno;
     }
@@ -70,11 +77,15 @@ class Usuario {
         } else {
             $query = "SELECT * FROM usuarios WHERE dni = :dni";
         }
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':dni', $dni);
         $resultado = $consulta -> execute();
-        if ($resultado && $consulta -> rowCount() > 0) {
-            $retorno = $consulta -> fetchObject('Usuario');
+        if ($resultado) {
+            $usuario = $consulta->fetchObject();
+            if($usuario){
+                $usuario = new Usuario($usuario->id, $usuario->nombre, $usuario->apellido, $usuario->dni, $usuario->email , $usuario->password , $usuario->puesto , $usuario->sector , $usuario->activo);
+                $retorno = $usuario;
+            }
         }
         return $retorno;
     }
@@ -83,15 +94,21 @@ class Usuario {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         if ($activo) {
+
             $query = "SELECT * FROM usuarios WHERE id = :id AND activo = TRUE";
         } else {
+            
             $query = "SELECT * FROM usuarios WHERE id = :id";
         }
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':id', $id);
         $resultado = $consulta -> execute();
-        if ($resultado && $consulta -> rowCount() > 0) {
-            $retorno = $consulta -> fetchObject('Usuario');
+        if ($resultado) {
+            $usuarioObtenido = $consulta->fetchObject();
+            if($usuarioObtenido){
+                $usuario = new Usuario($usuarioObtenido->id, $usuarioObtenido->nombre, $usuarioObtenido->apellido, $usuarioObtenido->dni, $usuarioObtenido->email , $usuarioObtenido->password , $usuarioObtenido->puesto , $usuarioObtenido->sector , $usuarioObtenido->activo);
+                $retorno = $usuario;
+            }
         }
         return $retorno;
     }
@@ -100,15 +117,22 @@ class Usuario {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         if ($activo) {
-            $query = "SELECT * FROM usuarios WHERE activo = TRUE AND puesto = :puesto";
+            $query = "SELECT * FROM usuarios WHERE activo = 1 AND puesto = :puesto";
         } else {
             $query = "SELECT * FROM usuarios WHERE puesto = :puesto";
         }
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':puesto', $puesto);
         $resultado = $consulta -> execute();
-        if ($resultado && $consulta -> rowCount() > 0) {
-            $retorno = $consulta -> fetchAll(PDO::FETCH_CLASS, 'Usuario');
+        if ($resultado) {
+            $arrayObtenido = array();
+            $usuarios = array();
+            $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
+            foreach($arrayObtenido as $usuario){
+                $usuarioAux = new Usuario($usuario->id, $usuario->nombre, $usuario->apellido, $usuario->dni, $usuario->email , $usuario->password , $usuario->puesto , $usuario->sector , $usuario->activo);
+                $usuarios[] = $usuarioAux;
+            }
+            $retorno = $usuarios;
         }
         return $retorno;
     }
@@ -116,7 +140,7 @@ class Usuario {
     public static function Login($email, $clave) {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("SELECT * FROM usuarios WHERE email = :email AND activo = TRUE");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("SELECT * FROM usuarios WHERE email = :email AND activo = TRUE");
         $consulta -> bindParam(':email', $email);
         $resultado = $consulta -> execute();
 
@@ -136,14 +160,13 @@ class Usuario {
     public static function Eliminar($id) {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("UPDATE usuarios SET activo = FALSE WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE usuarios SET activo = FALSE WHERE id = :id");
         $consulta -> bindParam(':id', $id);
         $resultado = $consulta -> execute();
 
         if ($resultado) {
             $retorno = true;
         }
-
         return $retorno;
     }
 
@@ -152,7 +175,7 @@ class Usuario {
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         //nombre, apellido, dni, email, password, puesto, sector, activo
         $query = "UPDATE usuarios SET nombre = :nombre, apellido = :apellido, dni = :dni, email = :email, password = :password, puesto = :puesto, sector = :sector, activo = :activo WHERE id = :id";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
         $consulta -> bindParam(':id', $this -> id);
         $consulta -> bindParam(':nombre', $this -> nombre);
         $consulta -> bindParam(':apellido', $this -> apellido);

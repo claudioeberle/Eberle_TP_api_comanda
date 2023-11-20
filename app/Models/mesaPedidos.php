@@ -1,6 +1,6 @@
 <?php
 
-require_once '..//db/accesoDatos.php';
+require_once 'C:\xampp\htdocs\zz-api-comanda\app\/db/accesoDatos.php';
 
 class MesaPedidos{
 
@@ -22,7 +22,7 @@ class MesaPedidos{
 
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> PrepararConsulta("INSERT INTO mesa_pedidos (idMesa, idPedido) VALUES (:idMesa, :idPedido");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO mesa_pedidos (idMesa, idPedido) VALUES (:idMesa, :idPedido)");
         $consulta -> bindParam(":idMesa", $this-> idMesa);
         $consulta -> bindParam(":idPedido", $this-> idPedido);
 
