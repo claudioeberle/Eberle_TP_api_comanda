@@ -63,8 +63,7 @@ $app -> group('/pedidos', function (RouteCollectorProxy $group) {
     $group -> get('/tiempoRestante/{codigoMesa}/{codigoPedido}', \PedidoController::class . ':TraerTiempoPedido');
     $group -> get('/sector/{sector}', \PedidoController::class . ':TraerPedidosPendientesPorSector')-> add(new AuthMiddleware(["socio","cocinero","cervecero","bartender","mozo"]));
     $group -> post('[/]', \PedidoController::class . ':CargarUno')-> add(new AuthMiddleware(["mozo"]));
-    $group -> post('/cambioEstado', \PedidoController::class . ':CambiarEstado')-> add(new AuthMiddleware(["cocinero","cervecero","bartender"]));
-    $group -> post('/foto', \PedidoController::class . ':SubirFotoMesa')-> add(new AuthMiddleware(["mozo","socio"]));
+    $group -> post('/cambioEstado', \PedidoController::class . ':CambiarEstadoPedido')-> add(new AuthMiddleware(["cocinero","cervecero","bartender"]));
     $group -> put('[/]', \PedidoController::class . ':ModificarUno')-> add(new AuthMiddleware(["mozo","socio"]));
     $group -> delete('/{id}', \PedidoController::class . ':BorrarUno')-> add(new AuthMiddleware(["mozo","socio"]));
 });

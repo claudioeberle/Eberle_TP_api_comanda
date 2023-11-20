@@ -134,8 +134,10 @@ class ProductoController implements IApiUsable {
             $response = $response->withHeader('Content-Length', filesize($resultado));
             readfile($resultado);
 
-            $payload = json_encode(array("Resultado" => "Archivo descargado con éxito"));
+            $payload = json_encode(array("Resultado" => "Archivo descargado con exito"));
+
         } else {
+
             $payload = json_encode(array("ERROR" => "Error al descargar el archivo"));
             $response = $response->withHeader('Content-Type', 'application/json');
         }

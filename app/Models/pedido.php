@@ -70,10 +70,11 @@ class Pedido {
     public function Modificar() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE pedidos SET idProducto = :idProducto, nombreCliente = :nombreCliente WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE pedidos SET idProducto = :idProducto, nombreCliente = :nombreCliente, estado = :estado WHERE id = :id");
         $consulta -> bindParam(':id', $this -> id);
         $consulta -> bindParam(':idProducto', $this -> idProducto);
         $consulta -> bindParam(':nombreCliente', $this -> nombreCliente);
+        $consulta -> bindParam(':estado', $this -> estado);
 
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -271,6 +272,7 @@ class Pedido {
 
             if($modificacion){
                 $this->Modificar();
+                var_dump($modificacion);
             }
         }
         return $retorno;
