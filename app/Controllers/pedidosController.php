@@ -22,10 +22,9 @@ class PedidoController implements IApiUsable {
 
             if ($mesa && $producto) {
 
-                //RESOLVER TEMA FOTO
-                //$fotoMesa = $request -> getUploadedFiles()['foto'];
-                //self::SubirFotoMesa($codigo, $fotoMesa);
-                
+                $fotoMesa = $request -> getUploadedFiles()['foto'];
+                self::SubirFotoMesa($codigoMesa, $fotoMesa);
+
                 $pedido = new Pedido(0, $codigoMesa, $idProducto, $nombreCliente, false, false, false, new DateTime());
                 if($pedido->codigoPedido !== false){
                     $resultado = $pedido -> GuardarPedido();
@@ -310,28 +309,27 @@ class PedidoController implements IApiUsable {
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-    private static function SubirFotoMesa($codigoIdentificacion, $fotoMesa) {
+    private static function SubirFotoMesa($codigoMesa, $fotoMesa) {
         $retorno = false;
 
         if ($fotoMesa -> getError() === UPLOAD_ERR_OK) {
-            $path = './fotos/pedidosDeMesas';
+            $path = './Fotos';
     
             if (!file_exists($path)) {
-                if (!file_exists('./fotos')) {
-                    mkdir('./fotos', 0777);
+                if (!file_exists('./Fotos')) {
+                    mkdir('./Fotos', 0777);
                 }
                 mkdir($path, 0777);
             }
 
             $extension = pathinfo($fotoMesa -> getClientFilename(), PATHINFO_EXTENSION);
-            $nombreFoto = $codigoIdentificacion . date("Ymd") . '.' . $extension;
+            $nombreFoto = $codigoMesa . date("Ymd") . '.' . $extension;
             $fotoMesa -> moveTo($path . '/' . $nombreFoto);
     
             $retorno = true;
         } else {
             $retorno = false;
         }
-
         return $retorno;
     }
 }

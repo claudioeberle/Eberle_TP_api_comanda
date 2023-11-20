@@ -125,7 +125,11 @@ class Pedido {
         $consulta -> bindParam(':codigoMesa', $codigoMesa);
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $consulta -> fetchObject('Pedido');
+            $aux = $consulta->fetchObject();
+            if($aux){
+                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->idProducto, $aux->nombreCliente, $aux->codigoPedido, $aux->estado, $aux->tiempoPreparacion, $aux->fecha);
+                $retorno = $nuevoPedido;
+            }
         }
         return $retorno;
     }
