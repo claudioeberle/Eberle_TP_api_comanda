@@ -14,6 +14,7 @@ class AuthMiddleware {
     public function __invoke(Request $request, RequestHandler $handler): Response {
         try {
 
+            var_dump($request);
             $token = trim(explode("Bearer", $request -> getHeaderLine('Authorization'))[1]);
             AutentificadorJWT::VerificarToken($token);
             $puestoToken = AutentificadorJWT::ObtenerData($token) -> puesto;

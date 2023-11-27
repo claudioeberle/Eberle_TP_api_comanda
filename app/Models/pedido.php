@@ -1,8 +1,8 @@
 <?php
 
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/mesaPedidos.php';
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/db/accesoDatos.php';
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Utils/utiles.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/mesaPedidos.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/db/accesoDatos.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Utils/utiles.php';
 
 
 

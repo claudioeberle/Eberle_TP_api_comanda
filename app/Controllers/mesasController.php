@@ -1,8 +1,8 @@
 <?php
 
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/mesa.php';
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/pedido.php';
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Interfaces/IApiUsable.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\Models\mesa.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/pedido.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Interfaces/IApiUsable.php';
 
 class MesasController implements IApiUsable {
 

@@ -1,6 +1,6 @@
 <?php
 
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\//db/accesoDatos.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\//db/accesoDatos.php';
 
 class Producto {
     public $id;

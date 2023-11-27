@@ -1,7 +1,7 @@
 <?php
 
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/mesa.php';
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/encuesta.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/mesa.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/encuesta.php';
 
 class EncuestasController{
 

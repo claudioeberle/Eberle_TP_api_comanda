@@ -1,7 +1,7 @@
 <?php
 
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/usuario.php';
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/autenticador.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/usuario.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/autenticador.php';
 
 class LoginController {
 

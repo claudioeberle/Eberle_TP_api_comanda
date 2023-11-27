@@ -1,7 +1,7 @@
 <?php
 
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Models/pedido.php';
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Interfaces/IApiUsable.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/pedido.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Interfaces/IApiUsable.php';
 
 class PedidoController implements IApiUsable {
 
@@ -22,8 +22,10 @@ class PedidoController implements IApiUsable {
 
             if ($mesa && $producto) {
 
-                $fotoMesa = $request -> getUploadedFiles()['foto'];
-                self::SubirFotoMesa($codigoMesa, $fotoMesa);
+                if($request -> getUploadedFiles()){
+                    $fotoMesa = $request -> getUploadedFiles()['foto'];
+                    self::SubirFotoMesa($codigoMesa, $fotoMesa);
+                }
 
                 $pedido = new Pedido(0, $codigoMesa, $idProducto, $nombreCliente, false, false, false, new DateTime());
                 if($pedido->codigoPedido !== false){

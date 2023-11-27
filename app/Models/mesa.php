@@ -1,7 +1,7 @@
 <?php
 
 require_once './db/AccesoDatos.php';
-require_once 'C:\xampp\htdocs\zz-api-comanda\app\/Utils/utiles.php';
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Utils/utiles.php';
 
 class Mesa {
 
@@ -31,11 +31,12 @@ class Mesa {
 
     public function GuardarMesa() {
         $retorno = false;
+        $fecha = $this -> fecha->format('Y-m-d H:i:s');
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO mesas (estado, codigoMesa, fecha) VALUES (:estado, :codigoMesa, :fecha)");
         $consulta -> bindParam(":estado", $this -> estado);
         $consulta -> bindParam(":codigoMesa", $this -> codigoMesa);
-        $consulta -> bindParam(":fecha", $this -> fecha->format('Y-m-d H:i:s'));
+        $consulta -> bindParam(":fecha", $fecha);
 
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -151,7 +152,7 @@ class Mesa {
 
         $reintentos = 0;
 
-        $ruta = 'C:\xampp\htdocs\zz-api-comanda\app\/db/codigosMesa.csv';
+        $ruta = 'C:\xampp\htdocs\api-comanda-3\app\/db/codigosMesa.csv';
         do{
             $codigo = Utiles::ObtenerCodigoAlfaNumAleatorio(5);
             $reintentos = $reintentos + 1;
