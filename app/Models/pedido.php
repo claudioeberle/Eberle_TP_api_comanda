@@ -1,5 +1,6 @@
 <?php
 
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/pedidoProducto.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/mesaPedidos.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/db/accesoDatos.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Utils/utiles.php';
@@ -10,17 +11,14 @@ class Pedido {
 
     public $id;
     public $codigoMesa;
-    public $idProducto;
     public $nombreCliente;
     public $codigoPedido;
-    public $estado;
-    public $tiempoPreparacion;
     public $fecha;
+    public $pedidosProducto;
 
-    public function __construct($id, $codigoMesa, $idProducto, $nombreCliente, $codigoPedido = false, $estado = false, $tiempoPreparacion = false, $fecha = false) {
+    public function __construct($id, $codigoMesa, $nombreCliente, $codigoPedido = false, $fecha = false) {
         $this -> id = $id;
         $this -> codigoMesa = $codigoMesa;
-        $this -> idProducto = $idProducto;
         $this -> nombreCliente = $nombreCliente;
         
         if($codigoPedido){
@@ -28,16 +26,7 @@ class Pedido {
         } else{
             $this -> codigoPedido = self::AsignarCodigoPedido();
         }
-        if($estado){
-            $this -> estado = $estado;
-        } else{
-            $this -> estado = "pendiente";
-        }
-        if($tiempoPreparacion){
-            $this -> tiempoPreparacion = $tiempoPreparacion;
-        } else{
-            $this -> tiempoPreparacion = false;
-        }
+
         if($fecha && is_string($fecha)){
             $this -> fecha = new DateTime($fecha);
         } else if($fecha){
@@ -45,19 +34,19 @@ class Pedido {
         } else {
             $this -> fecha = new DateTime();
         }
+
+        $this -> pedidosProducto = array();
     }
  
     public function GuardarPedido() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO pedidos (codigoMesa, idProducto, nombreCliente, codigoPedido, estado, tiempoPreparacion, fecha) VALUES (:codigoMesa, :idProducto, :nombreCliente, :codigoPedido, :estado, :tiempoPreparacion, :fecha)");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO pedidos (codigoMesa, nombreCliente, codigoPedido, fecha) VALUES (:codigoMesa, :nombreCliente, :codigoPedido, :fecha)");
+        $fecha = $this -> fecha->format('Y-m-d H:i:s');
         $consulta -> bindParam(':codigoMesa', $this -> codigoMesa);
-        $consulta -> bindParam(':idProducto', $this -> idProducto);
         $consulta -> bindParam(':nombreCliente', $this -> nombreCliente);
         $consulta -> bindParam(':codigoPedido', $this -> codigoPedido);
-        $consulta -> bindParam(':estado', $this -> estado);
-        $consulta -> bindParam(':tiempoPreparacion', $this -> tiempoPreparacion);
-        $consulta -> bindParam(':fecha', $this -> fecha->format('Y-m-d H:i:s'));
+        $consulta -> bindParam(':fecha', $fecha);
         $resultado = $consulta -> execute();
 
         if ($resultado) {
@@ -70,11 +59,9 @@ class Pedido {
     public function Modificar() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE pedidos SET idProducto = :idProducto, nombreCliente = :nombreCliente, estado = :estado WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE pedidos SET nombreCliente = :nombreCliente WHERE id = :id");
         $consulta -> bindParam(':id', $this -> id);
-        $consulta -> bindParam(':idProducto', $this -> idProducto);
         $consulta -> bindParam(':nombreCliente', $this -> nombreCliente);
-        $consulta -> bindParam(':estado', $this -> estado);
 
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -94,10 +81,11 @@ class Pedido {
             $pedidos = array();
             $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
             foreach($arrayObtenido as $aux){
-                $pedido = new Pedido($aux->id, $aux->codigoMesa, $aux->idProducto, $aux->nombreCliente, $aux->codigoPedido, $aux->estado, $aux->tiempoPreparacion, $aux->fecha);
-                $productos[] = $pedido;
+                $pedido = new Pedido($aux->id, $aux->codigoMesa, $aux->nombreCliente, $aux->codigoPedido, $aux->fecha);
+                $pedido->ActualizarPedidosProducto();
+                $pedidos[] = $pedido;
             }
-            $retorno = $productos;
+            $retorno = $pedidos;
         }
         return $retorno;
     }
@@ -112,7 +100,8 @@ class Pedido {
         if ($resultado) {
             $aux = $consulta->fetchObject();
             if($aux){
-                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->idProducto, $aux->nombreCliente, $aux->codigoPedido, $aux->estado, $aux->tiempoPreparacion, $aux->fecha);
+                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->nombreCliente, $aux->codigoPedido, $aux->fecha);
+                $nuevoPedido->ActualizarPedidosProducto();
                 $retorno = $nuevoPedido;
             }
         }
@@ -128,7 +117,8 @@ class Pedido {
         if ($resultado) {
             $aux = $consulta->fetchObject();
             if($aux){
-                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->idProducto, $aux->nombreCliente, $aux->codigoPedido, $aux->estado, $aux->tiempoPreparacion, $aux->fecha);
+                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->nombreCliente, $aux->codigoPedido, $aux->fecha);
+                $nuevoPedido->ActualizarPedidosProducto();
                 $retorno = $nuevoPedido;
             }
         }
@@ -145,7 +135,8 @@ class Pedido {
         if ($resultado) {
             $aux = $consulta->fetchObject();
             if($aux){
-                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->idProducto, $aux->nombreCliente, $aux->codigoPedido, $aux->estado, $aux->tiempoPreparacion, $aux->fecha);
+                $nuevoPedido = new Pedido($aux->id, $aux->codigoMesa, $aux->nombreCliente, $aux->codigoPedido, $aux->fecha);
+                $nuevoPedido->ActualizarPedidosProducto();
                 $retorno = $nuevoPedido;
             }
         }
@@ -154,7 +145,7 @@ class Pedido {
 
     public static function ObtenerTiempoRestante($codigoMesa, $codigoPedido) {
 
-        $retorno = [ "Producto" => "", "mensaje" => "" ];
+        /* $retorno = [ "Producto" => "", "mensaje" => "" ];
 
         $pedido = self::ObtenerPorCodigoPedido($codigoPedido);
         if($pedido !== false){
@@ -201,22 +192,12 @@ class Pedido {
         } else {
             $retorno['mensaje'] = "No se encontró el pedido";
         }
-        return $retorno;
-    }
-
-    private function minutosFaltantesParaResolucion(){
-        $horaActual = new DateTime();
-        $diferencia = $horaActual->diff($this->fecha);
-        $minutosTranscurridos = $diferencia->days * 24 * 60 + $diferencia->h * 60 + $diferencia->i;
-
-        $minutosRestantes = max(0, $this->tiempoPreparacion - $minutosTranscurridos);
-
-        return $minutosRestantes;
+        return $retorno; */
     }
 
     public static function ObtenerPedidosPorSector($sector, $pendientes = true) {
 
-        $pedidosSector = array();
+        /* $pedidosSector = array();
         $pedidos = Pedido::ObtenerTodosLosPedidos();
         if($pedidos !== false){
 
@@ -236,46 +217,16 @@ class Pedido {
                 }
             }
         }
-        return $pedidosSector;
+        return $pedidosSector; */
     }
 
     public function ObtenerSector(){
-        $sectorPedido = false;
+       /*  $sectorPedido = false;
         $producto = Producto::ObtenerPorID($this->idProducto);
         if($producto !== false){
             $sectorPedido = $producto->sector;
         }
-        return $sectorPedido;
-    }
-
-    public function CambiarEstado($nuevoEstado, $tiempoPreparacion = false) {
-
-        $retorno = false;
-        $modificacion = true;
-
-        if($nuevoEstado === 'pendiente' || $nuevoEstado === 'en preparacion' || $nuevoEstado === 'listo para servir' 
-        || $nuevoEstado === 'entregado' || $nuevoEstado === 'cancelado'){
-
-            if($tiempoPreparacion !== false && $nuevoEstado === 'en preparacion'){
-
-                $this->estado = $nuevoEstado;
-                $this->tiempoPreparacion = $tiempoPreparacion;
-                $retorno = ["Estado" => "{$this->estado}"];
-
-            } else if($tiempoPreparacion === false && ($nuevoEstado === 'pendiente' || $nuevoEstado === 'listo para servir' || $nuevoEstado === 'entregado' || $nuevoEstado === 'cancelado')){
-                
-                $this->estado = $nuevoEstado;
-                $retorno = ["Estado" => "{$this->estado}"];
-            } else {
-                $modificacion = false;
-            }
-
-            if($modificacion){
-                $this->Modificar();
-                var_dump($modificacion);
-            }
-        }
-        return $retorno;
+        return $sectorPedido; */
     }
 
     private static function AsignarCodigoPedido(){
@@ -295,6 +246,11 @@ class Pedido {
             Utiles::GuardarCodigoEnCSV($codigo, $ruta);
         }
         return $codigo;
+    }
+
+    public function ActualizarPedidosProducto(){
+        $listaPedidosProducto = PedidoProducto::ObtenerListaPorCodigoPedido($this->codigoPedido);
+        $this->pedidosProducto = $listaPedidosProducto;
     }
 }
 

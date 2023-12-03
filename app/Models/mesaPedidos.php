@@ -4,11 +4,13 @@ require_once 'C:\xampp\htdocs\api-comanda-3\app\/db/accesoDatos.php';
 
 class MesaPedidos{
 
+    public $id;
     public $idMesa;
     public $idPedido;
 
-    public function __construct($idMesa, $idPedido){
+    public function __construct($id, $idMesa, $idPedido){
 
+        $this->id = $id;
         $mesa = Mesa::ObtenerPorID($idMesa);
         $pedido = Pedido::ObtenerPorID($idPedido);
 
@@ -33,33 +35,25 @@ class MesaPedidos{
         return $retorno;
     }
 
-    private static function ObtenerMesaPedidos($idMesa){
+    public static function ObtenerMesaPedidos($idMesa){
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $query = "SELECT * FROM mesa_pedidos WHERE id_mesa = :id_mesa";
-        $consulta = $objetoAccesoDatos -> PrepararConsulta($query);
-        $consulta -> bindParam(':id_mesa', $idMesa);
+        $query = "SELECT * FROM mesa_pedidos WHERE idMesa = :idMesa";
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
+        $consulta -> bindParam(':idMesa', $idMesa);
         $resultado = $consulta -> execute();
         if ($resultado) {
-            $retorno = $consulta -> fetchObject('MesaPedidos');
+            $listaMesaPedido = array();
+            $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
+            foreach($arrayObtenido as $mesaPed){
+                $mesaAux = new MesaPedidos($mesaPed->id, $mesaPed->idMesa, $mesaPed->idPedido);
+                $listaMesaPedido[] = $mesaAux;
+            }
+            $retorno = $listaMesaPedido;
         }
         return $retorno;
     }
 
-    public static function ObtenerPedidosDeUnaMesa($idMesa){
-
-        $listaDePedidos = array();
-        $mesaPedidos = self::ObtenerMesaPedidos($idMesa);
-        if($mesaPedidos !== false){
-            foreach($mesaPedidos as $mesaPedido){
-                $pedido = Pedido::ObtenerPorID($mesaPedido->idPedido);
-                if($pedido !== null){
-                    array_push($listaDePedidos, $pedido);
-                }
-            }
-        }
-        return $listaDePedidos;
-    }
-
+    
 }
 ?>

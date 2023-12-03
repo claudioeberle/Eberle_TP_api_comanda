@@ -70,6 +70,36 @@ class Encuesta {
         }
         return $retorno;
     }
+
+    public static function ObtenerListaEncuestasPorPromedio($promedio){
+
+        $retorno = false;
+        $listaEncuestas = array();
+
+        if($promedio >= 0 && $promedio <= 10){
+
+            $encuestas = Encuesta::ObtenerTodasLasEncuestas();
+            if($encuestas){
+                foreach($encuestas as $escuesta){
+                    if($escuesta->ObtenerPromedioPuntaje() >= $promedio){
+                        array_push($listaEncuestas, $escuesta);    
+                    }
+                }
+            }
+            if(count($listaEncuestas) > 0){
+                $retorno = $listaEncuestas;
+            }
+        }
+        return $retorno;
+    }
+
+    public function ObtenerPromedioPuntaje(){
+
+        $promedio = 0;
+        $acum = $this->puntosCocinero + $this->puntosMesa + $this->puntosMozo + $this->puntosResto;
+        $promedio = $acum/4;
+        return $promedio;
+    }
 }
 
 ?>

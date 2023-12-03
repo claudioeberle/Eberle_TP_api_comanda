@@ -1,5 +1,5 @@
 <?php
-
+require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/posiciones.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\Models\mesa.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/pedido.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Interfaces/IApiUsable.php';
@@ -9,19 +9,26 @@ class MesasController implements IApiUsable {
     public function CargarUno($request, $response, $args) {
 
         $codigoMesa = Mesa::AsignarCodigoMesa();
-        if($codigoMesa){
+        $posicion = PosicionMesa::ObtenerPosicionLibre();
+        if($posicion){
+            if($codigoMesa){
 
-            $mesa = new Mesa(false, false, $codigoMesa, new DateTime());
-            if($mesa){
-                $resultado = $mesa -> GuardarMesa();
-                if($resultado !== false){
-                    $payload = json_encode(array("Resultado" => "Se ha creado con éxito una mesa con el codigo: {$resultado}"));
+                $mesa = new Mesa(false, false, $codigoMesa, new DateTime(), $posicion);
+                if($mesa){
+                    $resultado = $mesa -> GuardarMesa();
+                    if($resultado !== false){
+                        $payload = json_encode(array("Resultado" => "Se ha creado con éxito una mesa con el codigo: {$resultado}"));
+                    } else {
+                        $payload = json_encode(array("ERROR" => "Hubo un error durante la asignacion de codigo de mesa"));
+                    }
                 } else {
-                    $payload = json_encode(array("ERROR" => "Hubo un error durante la asignacion de codigo de mesa"));
+                    $payload = json_encode(array("ERROR" => "Hubo un error durante la creacion de la mesa"));
                 }
             } else {
-                $payload = json_encode(array("ERROR" => "Hubo un error durante la creacion de la mesa"));
+                $payload = json_encode(array("ERROR" => "Error al asignar codigo de Mesa - reintente"));
             }
+        } else {
+            $payload = json_encode(array("ERROR" => "No hay ninguna posicion libre"));
         }
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
@@ -64,6 +71,8 @@ class MesasController implements IApiUsable {
 
     public function CambiarEstado($request, $response, $args) {
         $parametros = $request -> getParsedBody();
+        $token = trim(explode("Bearer", $request -> getHeaderLine('Authorization'))[1]);
+        $puestoToken = AutentificadorJWT::ObtenerData($token) -> puesto;
         
         if (isset($parametros["codigoMesa"]) && isset($parametros["estado"])) {
 
@@ -75,26 +84,35 @@ class MesasController implements IApiUsable {
                 $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
                 if ($mesa) {
 
-                    $mesa->ActualizarListaPedidos();
+                    if($mesa->estado !== 'cerrada'){
+                        $mesa->ActualizarListaPedidos();
 
-                    if($mesa->HayPedidosPendientes()){
-                        
-                        $mesa -> CambiarEstado($estado);
-                        $payload = json_encode(array("ESTADO" => "Se modifico el estado de {$codigoMesa} a '{$estado}'")); 
-                        
-                    } else{
-                        $pedidosPendientes = $mesa->ObtenerPedidosPendientes();
-                        if($pedidosPendientes !== false){
+                        if(!$mesa->HayPedidosPendientes()){
                             
-                            foreach($pedidosPendientes as $pedido){
-                                $mensaje = 'La mesa tiene pendientes los pedidos: \n';
-                                $mensaje .= $pedido->codigoPedido . "\n";
-                            }                                
-                            $payload = json_encode(array("ERROR" => $mensaje));
+                            if($mesa -> CambiarEstado($estado, $puestoToken)){
+                                $payload = json_encode(array("ESTADO" => "Se modifico el estado de la mesa {$codigoMesa} a '{$estado}'"));
+                                if($estado === 'cerrada'){
+                                    PosicionMesa::Modificar($mesa->idPosicion, false);
+                                }
+                            } else {
+                                $payload = json_encode(array("ERROR" => "Recuerde que solo un 'socio' puede cerrar una mesa"));
+                            }
+                        } else{
+                            $pedidosPendientes = $mesa->ObtenerPedidosPendientes();
+                            if($pedidosPendientes !== false){
+                                
+                                foreach($pedidosPendientes as $pedido){
+                                    $mensaje = 'La mesa tiene pendientes los pedidos: \n';
+                                    $mensaje .= $pedido->codigoPedido . "\n";
+                                }                                
+                                $payload = json_encode(array("ERROR" => $mensaje));
 
-                        } else {
-                            $payload = json_encode(array("ERROR" => "Todavia quedan pedidos pendientes"));
+                            } else {
+                                $payload = json_encode(array("ERROR" => "Todavia quedan pedidos pendientes"));
+                            }
                         }
+                    } else {
+                        $payload = json_encode(array("ERROR" => "Esta mesa se encuentra cerrada"));
                     }
                 } else {
                     $payload = json_encode(array("ERROR" => "No se pudo encontrar una mesa con el código {$codigoMesa}"));
@@ -103,7 +121,7 @@ class MesasController implements IApiUsable {
                 $payload = json_encode(array("ERROR" => "El estado propuesto no esta permitido"));
             }
         } else {
-            $payload = json_encode(array("ERROR" => "El parámetro 'codigoMesa' es obligatorio para modificar el estado de una mesa"));
+            $payload = json_encode(array("ERROR" => "El parámetro 'codigoMesa' y 'estado' son obligatorios para modificar el estado de una mesa"));
         }
 
         $response -> getBody() -> write($payload);
@@ -111,12 +129,12 @@ class MesasController implements IApiUsable {
     }
 
     public function EliminarUno($request, $response, $args) {
-
+        $parametros = $request -> getParsedBody();
         $resultado = false;
 
-        if (isset($args["codigoMesa"])) {
+        if (isset($parametros["codigoMesa"])) {
 
-            $codigoMesa = $args["codigoMesa"];
+            $codigoMesa = $parametros["codigoMesa"];
             $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
             if($mesa){
 
@@ -141,6 +159,79 @@ class MesasController implements IApiUsable {
 	public function ModificarUno($request, $response, $args) {
 
         $payload = json_encode(array("ERROR" => "Para modificar el estado de una mesa utilice la funcion CambiarEstado"));
+        $response -> getBody() -> write($payload);
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    public function Facturacion($request, $response, $args) {
+        $parametros = $request -> getParsedBody();
+        $token = trim(explode("Bearer", $request -> getHeaderLine('Authorization'))[1]);
+        $puestoToken = AutentificadorJWT::ObtenerData($token) -> puesto;
+        $retorno = array();
+
+        if(isset($parametros['codigoMesa'])){
+
+            $codigoMesa = $parametros['codigoMesa'];
+            $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
+            if($mesa){
+
+                if(!$mesa->HayPedidosPendientes()){
+                    $facturacion = $mesa->GenerarFacturacion();
+                    if($facturacion > 0){
+                        
+                        $mesa->CambiarEstado('con cliente pagando', $puestoToken);
+                        array_push($retorno, ['Detalles', $mesa->GenerarDetalleFacturacion()]);
+                        array_push($retorno, ['Importe Total' => "$ {$facturacion}"]);
+                        $payload = json_encode(array("Factura" => $retorno));
+
+                    } else {
+                        $payload = json_encode(array("ERROR" => "Hubo un error en el calculo de la facturacion"));
+                    }
+                } else {
+                    $payload = json_encode(array("ERROR" => "Aun hay pedidos pendientes para esta mesa - Para facturar debe entregarlos o anularlos"));
+                }
+            } else {
+                $payload = json_encode(array("ERROR" => "No se encontro una mesa para el codigo {$codigoMesa}"));
+            }
+        } else {
+            $payload = json_encode(array("ERROR" => "El parámetro 'codigoMesa' es obligatorio para emitir la factura"));
+        }
+        $response -> getBody() -> write($payload);
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    public function MesaMasUtilizada($request, $response, $args){
+
+        $lista = array();
+        $valorMax = 0;
+        $numeroMesa = 0;
+        $posiciones = PosicionMesa::ObtenerTodasLasPosiciones();
+        $mesas = Mesa::ObtenerTodasLasMesas();
+        if($mesas && $posiciones){
+
+            for($i = 1; $i <= count($posiciones); $i++){
+
+                $lista[$i] = 0;
+            }
+
+            for($i = 0; $i < count($mesas); $i++){
+
+                $posicion = $mesas[$i]->idPosicion;
+                $cant = $lista[$posicion];
+                $cant += 1;
+                $lista[$posicion] = $cant;
+            }
+            for ($i=1; $i <= count($lista); $i++) { 
+                
+                if($lista[$i] > $valorMax){
+                    $valorMax = $lista[$i];
+                    $numeroMesa = $i;
+                }
+            }
+            $payload = json_encode(array("Mesa mas utilizada" => "La mesa más utilizada en la Nº {$numeroMesa}"));
+        } else {
+            $payload = json_encode(array("ERROR" => "error al obtener las mesas"));
+        }
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
     }

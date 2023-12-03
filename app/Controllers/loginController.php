@@ -18,13 +18,15 @@ class LoginController {
             if ($resultado instanceof Usuario) {
 
                 $usuario = $resultado;
-                $token = AutentificadorJWT::CrearToken([ "email" => $usuario -> email, "puesto" => $usuario -> puesto]);
+                $token = AutentificadorJWT::CrearToken([ "email" => $usuario -> email, "puesto" => $usuario -> puesto, "sector" => $usuario -> sector, "id" => $usuario -> id]);
                 $payload = json_encode(array("Token" => $token));
                 
             } else {
 
                 $payload = json_encode(array("ERROR" => $resultado));
             }
+        } else {
+            $payload = json_encode(array("ERROR" => "los parametros 'email' y 'password' son obligatorios"));
         }
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');

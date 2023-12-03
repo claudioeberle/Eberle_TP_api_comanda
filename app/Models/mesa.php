@@ -1,6 +1,7 @@
 <?php
 
 require_once './db/AccesoDatos.php';
+require_once './Models/mesaPedidos.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Utils/utiles.php';
 
 class Mesa {
@@ -10,8 +11,9 @@ class Mesa {
     public $codigoMesa;
     public $pedidos;
     public $fecha;
+    public $idPosicion;
 
-    public function __construct($id, $estado, $codigoMesa, $fecha) {
+    public function __construct($id, $estado, $codigoMesa, $fecha, $idPosicion) {
 
         if($id === false){
             $this->id = -1;
@@ -20,23 +22,25 @@ class Mesa {
         }
 
         if($estado === false){
-            $this -> estado = "cerrada";
+            $this -> estado = "pendiente";
         } else {
             $this -> estado = $estado;
         }
         $this->fecha = $fecha;
         $this -> codigoMesa = $codigoMesa;
         $this -> pedidos = array();
+        $this -> idPosicion = $idPosicion;
     }
 
     public function GuardarMesa() {
         $retorno = false;
         $fecha = $this -> fecha->format('Y-m-d H:i:s');
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO mesas (estado, codigoMesa, fecha) VALUES (:estado, :codigoMesa, :fecha)");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO mesas (estado, codigoMesa, fecha, idPosicion) VALUES (:estado, :codigoMesa, :fecha, :idPosicion)");
         $consulta -> bindParam(":estado", $this -> estado);
         $consulta -> bindParam(":codigoMesa", $this -> codigoMesa);
         $consulta -> bindParam(":fecha", $fecha);
+        $consulta -> bindParam(":idPosicion", $this -> idPosicion);
 
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -55,7 +59,8 @@ class Mesa {
         $mesas = array();
         $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
         foreach($arrayObtenido as $i){
-            $mesa = new Mesa($i->id, $i->estado, $i->codigoMesa, $i->fecha);
+            $mesa = new Mesa($i->id, $i->estado, $i->codigoMesa, $i->fecha, $i->idPosicion);
+            $mesa->ActualizarListaPedidos();
             $mesas[] = $mesa;
         }
         return $mesas;
@@ -71,7 +76,7 @@ class Mesa {
         if ($resultado) {
             $mesaObtenida = $consulta->fetchObject();
             if($mesaObtenida){
-                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha);
+                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha, $mesaObtenida->idPosicion);
                 $retorno = $mesa;
             }
         }
@@ -88,21 +93,27 @@ class Mesa {
         if ($resultado) {
             $mesaObtenida = $consulta->fetchObject();
             if($mesaObtenida){
-                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha);
+                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha, $mesaObtenida->idPosicion);
                 $retorno = $mesa;
             }
         }
         return $retorno;
     }
 
-    public function CambiarEstado($nuevoEstado) {
+    public function CambiarEstado($nuevoEstado, $puestoUsuario) {
         $retorno = false;
         //*“con cliente esperando pedido” ,”con cliente comiendo”,“con cliente pagando” y “cerrada”.
-        if($nuevoEstado === "con cliente esperando pedido" || $nuevoEstado === "con cliente comiendo" 
-        || $nuevoEstado === "con cliente pagando" || $nuevoEstado === "cerrada"){
+        if(($this->HayPedidosPendientes() && $nuevoEstado === "con cliente esperando pedido") 
+        || (!$this->HayPedidosPendientes() && ($nuevoEstado === "con cliente comiendo" || $nuevoEstado === "con cliente pagando" || $nuevoEstado === "cerrada"))){
 
-            $this->estado = $nuevoEstado;
-            $retorno = $this->Modificar();
+            if($nuevoEstado === "cerrada" && $puestoUsuario !== 'socio'){
+
+                $retorno = false;
+
+            } else {
+                $this->estado = $nuevoEstado;
+                $retorno = $this->Modificar();
+            }
         }
         return $retorno;
     }
@@ -121,7 +132,7 @@ class Mesa {
 
     public function ActualizarListaPedidos(){
 
-        $this->pedidos = MesaPedidos::ObtenerPedidosDeUnaMesa($this->id);
+        $this->pedidos = self::ObtenerPedidosDeUnaMesa($this->id);
     }
 
     public function Modificar() {
@@ -141,9 +152,11 @@ class Mesa {
     public function AgregarPedido($idPedido){
 
         $retorno = false;
-        $relacionMesaPedido = new MesaPedidos($this->id, $idPedido);
+        $relacionMesaPedido = new MesaPedidos(0, $this->id, $idPedido);
         if($relacionMesaPedido->Guardar()){
             $retorno = true;
+            $pedido = Pedido::ObtenerPorID($idPedido);
+            array_push($this->pedidos, $pedido);
         }
         return $retorno;
     }
@@ -173,9 +186,16 @@ class Mesa {
         $retorno = false;
         $this->ActualizarListaPedidos();
         foreach($this->pedidos as $pedido){
-            if($pedido->estado === 'pendiente' || $pedido->estado === 'en preparacion' || $pedido->estado === 'listo para servir'){
-                $retorno = true;
-                break;
+            if($pedido){
+                $pedidosProd = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
+                if($pedidosProd){
+                    foreach($pedidosProd as $pedProd){
+                        if($pedProd->estado !== 'entregado' && $pedProd->estado !== 'anulado' ){
+                            $retorno = true;
+                            break;
+                        }
+                    }
+                }  
             }
         }
         return $retorno;
@@ -187,16 +207,87 @@ class Mesa {
         $pedidosPendientes = array();
         $this->ActualizarListaPedidos();
         foreach($this->pedidos as $pedido){
-            if($pedido->estado === 'pendiente' || $pedido->estado === 'en preparacion' || $pedido->estado === 'listo para servir'){
-                array_push($pedidosPendientes, $pedido);
-            }
+           if($pedido instanceof Pedido){
+                $pedidosProd = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
+                if($pedidosProd){
+                    foreach($pedidosProd as $pedProd){
+                        if($pedProd->estado === 'pendiente' || $pedProd->estado === 'en preparacion' || $pedProd->estado === 'listo para servir'){
+                            array_push($pedidosPendientes, $pedProd);
+                        }
+                    }
+                }
+           }
         }
 
         if(count($pedidosPendientes) > 0){
+            var_dump($pedidosPendientes);
             $retorno = $pedidosPendientes;
         }
         return $retorno;
     }
+
+    public static function ObtenerPedidosDeUnaMesa($idMesa){
+
+        $listaDePedidos = array();
+        $mesaPedidos = MesaPedidos::ObtenerMesaPedidos($idMesa);
+        if($mesaPedidos !== false){
+            foreach($mesaPedidos as $mesaPedido){
+                $pedido = Pedido::ObtenerPorID($mesaPedido->idPedido);
+                if($pedido !== false){
+                    $pedidosProd = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
+                    if($pedidosProd){
+                        foreach($pedidosProd as $pedProd){
+                            array_push($listaDePedidos, $pedProd);
+                        }
+                    }
+                }
+            }
+        }
+        return $listaDePedidos;
+    }
+
+    public function GenerarFacturacion(){
+        $retorno = 0;
+        $importe = 0;
+        $pedidos = Mesa::ObtenerPedidosDeUnaMesa($this->id);
+        if($pedidos){
+
+            foreach($pedidos as $pedido){
+                if($pedido instanceof Pedido){
+                    $pedidosProductos = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
+                    if($pedidosProductos){
+                        foreach($pedidosProductos as $pedProd){
+                            $importe += ($pedProd->precio);
+                        }
+                    }
+                }
+            }
+            $retorno = $importe;
+        }
+        return $retorno;
+    }
+
+    public function GenerarDetalleFacturacion(){
+        $retorno = false;
+        $detalles = array();
+        $pedidos = Mesa::ObtenerPedidosDeUnaMesa($this->id);
+        if($pedidos){
+
+            foreach($pedidos as $pedido){
+                if($pedido instanceof Pedido){
+                    $pedidosProductos = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
+                    if($pedidosProductos){
+                        foreach($pedidosProductos as $pedProd){
+                            array_push($detalles, [$pedProd->producto->nombre => " {$pedProd->producto->precio}", 'Cantidad: ' => $pedProd->cantidad]);
+                        }
+                    }
+                }
+            }
+            $retorno = $detalles;
+        }
+        return $retorno;
+    }
+
 
 }
 

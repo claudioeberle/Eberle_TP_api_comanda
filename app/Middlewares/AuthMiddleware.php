@@ -11,10 +11,11 @@ class AuthMiddleware {
         $this -> puestosValidos = $puestosValidos;
     }
 
+    public $puesto;
+
     public function __invoke(Request $request, RequestHandler $handler): Response {
         try {
 
-            var_dump($request);
             $token = trim(explode("Bearer", $request -> getHeaderLine('Authorization'))[1]);
             AutentificadorJWT::VerificarToken($token);
             $puestoToken = AutentificadorJWT::ObtenerData($token) -> puesto;
@@ -24,6 +25,7 @@ class AuthMiddleware {
                 return $handler -> handle($request);
                 
             } else {
+
                 throw new Exception("El usuario no esta autorizado");
             }
         } catch (Exception $e) {
