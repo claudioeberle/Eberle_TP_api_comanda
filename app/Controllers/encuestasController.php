@@ -2,6 +2,8 @@
 
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/mesa.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/encuesta.php';
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class EncuestasController{
 
@@ -111,7 +113,28 @@ class EncuestasController{
         $response -> getBody() -> write($payload);
         return $response -> withHeader('Content-Type', 'application/json');
     }
-    
+
+    public function GuardarLogoPdf($request, $response, $args){
+
+        $dompdf = new Dompdf();
+        $html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Document</title></head><body><img src="https://www.cronista.com/files/image/306/306621/5ffe2e44324f6.jpg" alt="LOGO-EMPRESA"></body></html>';
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $pdfContent = $dompdf->output();
+        
+        $tempFolderPath = sys_get_temp_dir();
+        $pdfFileName = 'logo-API-COMANDA.pdf';
+        $pdfFilePath = $tempFolderPath . '/' . $pdfFileName;
+        file_put_contents($pdfFilePath, $pdfContent);
+
+        $response = $response->withHeader('Content-Type', 'application/pdf');
+        $response = $response->withHeader('Content-Disposition', 'attachment; filename="' . $pdfFileName . '"');
+        $response = $response->withHeader('Content-Length', filesize($pdfFilePath));
+        readfile($pdfFilePath);
+        return $response;
+    }
 }
 
 ?>

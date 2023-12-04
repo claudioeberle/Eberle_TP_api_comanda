@@ -243,7 +243,8 @@ class PedidoController implements IApiUsable {
 
                             case 'listo para servir':
                                 if($puestoToken === 'mozo' || $puestoToken === 'socio'){
-                                    $mesa -> CambiarEstado('con cliente comiendo', $puestoToken);
+                                    $pedidoProducto->fechaResolucion = new DateTime();
+                                    $pedidoProducto->Modificar();
                                     $nuevoEstado = 'entregado';
                                     $tiempoPreparacion = false;
                                 } else {
@@ -261,6 +262,9 @@ class PedidoController implements IApiUsable {
                             if ($pedidoProducto->CambiarEstado($nuevoEstado, $tiempoPreparacion)) {
 
                                 $payload = json_encode(array("Resultado" => "El estado del pedido fue cambiado a '{$nuevoEstado}'"));
+                                if($nuevoEstado === 'entregado'){
+                                    $mesa -> CambiarEstado('con cliente comiendo', $puestoToken);
+                                }
                             } else {
                                 $payload = json_encode(array("ERROR" => "No se pudo modificar el estado del pedido"));
                             }
@@ -473,7 +477,8 @@ class PedidoController implements IApiUsable {
     }
 
     public static function ObtenerTodosPedidosParaServir($request, $response, $args){
-
+        $token = trim(explode("Bearer", $request -> getHeaderLine('Authorization'))[1]);
+        $idUsuario = AutentificadorJWT::ObtenerData($token) -> id;
         $payload = json_encode(array("ERROR" => "No se pudieron obtener los pedidos listos"));
         $listaFiltrada = array();
         $pedidosProductoPendientes = PedidoProducto::ObtenerTodosLosPedidoProducto();
@@ -482,8 +487,15 @@ class PedidoController implements IApiUsable {
             
             foreach($pedidosProductoPendientes as $pedProd){
 
-                if($pedProd->estado === 'listo para servir'){
-                    array_push($listaFiltrada, $pedProd);
+                $pedido = Pedido::ObtenerPorCodigoPedido($pedProd->codigoPedido);
+                if($pedido){
+
+                    $mesa = Mesa::ObtenerPorCodigoMesa($pedido->codigoMesa);
+                    if($mesa){
+                        if($pedProd->estado === 'listo para servir' && $idUsuario === $mesa->idMozo){
+                            array_push($listaFiltrada, $pedProd);
+                        }
+                    }
                 }
             }
 
@@ -499,7 +511,30 @@ class PedidoController implements IApiUsable {
         }
         $response -> getBody() -> write($payload);
         return $response->withHeader('Content-Type', 'application/json');
-    }  
+    }
+
+    public static function PedidosConRetraso($request, $response, $args){
+        $payload = json_encode(array("Retrasos" => "No hay pedidos con retrasos"));
+
+        $resolucion = array();
+        $pedidosProducto = PedidoProducto::ObtenerTodosLosPedidoProducto();
+        if($pedidosProducto){
+
+            foreach($pedidosProducto as $pedProd){
+                if($pedProd->estado === 'entregado'){
+                    $retraso = $pedProd->ObtenerRetraso();
+                    if($retraso){
+                        array_push($resolucion, ['Pedido' => $pedProd->codigoPedido, 'Producto' => $pedProd->producto->nombre, 'Hora Alta' => $pedProd->fechaAlta, 'Hora Resolucion' => $pedProd->fechaResolucion, 'Tiempo Retraso' => $retraso . ' minutos']);
+                    }
+                }
+            }
+            if(count($resolucion) > 0){
+                $payload = json_encode(array("Pedidos con Retraso" => $resolucion));
+            }
+        }
+        $response -> getBody() -> write($payload);
+        return $response->withHeader('Content-Type', 'application/json');
+    }
 }
 
 ?>

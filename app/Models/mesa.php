@@ -12,8 +12,10 @@ class Mesa {
     public $pedidos;
     public $fecha;
     public $idPosicion;
+    public $idMozo;
+    public $facturada;
 
-    public function __construct($id, $estado, $codigoMesa, $fecha, $idPosicion) {
+    public function __construct($id, $estado, $codigoMesa, $fecha, $idPosicion, $idMozo, $facturada) {
 
         if($id === false){
             $this->id = -1;
@@ -30,17 +32,22 @@ class Mesa {
         $this -> codigoMesa = $codigoMesa;
         $this -> pedidos = array();
         $this -> idPosicion = $idPosicion;
+        $this -> idMozo = $idMozo;
+        $this -> facturada = $facturada;
+
     }
 
     public function GuardarMesa() {
         $retorno = false;
         $fecha = $this -> fecha->format('Y-m-d H:i:s');
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO mesas (estado, codigoMesa, fecha, idPosicion) VALUES (:estado, :codigoMesa, :fecha, :idPosicion)");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("INSERT INTO mesas (estado, codigoMesa, fecha, idPosicion, idMozo, facturada) VALUES (:estado, :codigoMesa, :fecha, :idPosicion, :idMozo, :facturada)");
         $consulta -> bindParam(":estado", $this -> estado);
         $consulta -> bindParam(":codigoMesa", $this -> codigoMesa);
         $consulta -> bindParam(":fecha", $fecha);
         $consulta -> bindParam(":idPosicion", $this -> idPosicion);
+        $consulta -> bindParam(":idMozo", $this -> idMozo);
+        $consulta -> bindParam(":facturada", $this -> facturada);
 
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -59,7 +66,7 @@ class Mesa {
         $mesas = array();
         $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
         foreach($arrayObtenido as $i){
-            $mesa = new Mesa($i->id, $i->estado, $i->codigoMesa, $i->fecha, $i->idPosicion);
+            $mesa = new Mesa($i->id, $i->estado, $i->codigoMesa, $i->fecha, $i->idPosicion, $i->idMozo, $i->facturada);
             $mesa->ActualizarListaPedidos();
             $mesas[] = $mesa;
         }
@@ -76,7 +83,7 @@ class Mesa {
         if ($resultado) {
             $mesaObtenida = $consulta->fetchObject();
             if($mesaObtenida){
-                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha, $mesaObtenida->idPosicion);
+                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha, $mesaObtenida->idPosicion, $mesaObtenida->idMozo, $mesaObtenida->facturada);
                 $retorno = $mesa;
             }
         }
@@ -93,7 +100,7 @@ class Mesa {
         if ($resultado) {
             $mesaObtenida = $consulta->fetchObject();
             if($mesaObtenida){
-                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha, $mesaObtenida->idPosicion);
+                $mesa = new Mesa($mesaObtenida->id, $mesaObtenida->estado, $mesaObtenida->codigoMesa, $mesaObtenida->fecha, $mesaObtenida->idPosicion, $mesaObtenida->idMozo, $mesaObtenida->facturada);
                 $retorno = $mesa;
             }
         }
@@ -138,9 +145,10 @@ class Mesa {
     public function Modificar() {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE mesas SET estado = :estado WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE mesas SET estado = :estado, facturada = :facturada WHERE id = :id");
         $consulta -> bindParam(':id', $this -> id);
         $consulta -> bindParam(':estado', $this -> estado);
+        $consulta -> bindParam(':facturada', $this -> facturada);
 
         $resultado = $consulta -> execute();
         if ($resultado) {
@@ -176,7 +184,6 @@ class Mesa {
             $codigo = false;
         } else {
             $retorno = Utiles::GuardarCodigoEnCSV($codigo, $ruta);
-            var_dump($retorno);
         }
         return $codigo;
     }
@@ -253,12 +260,10 @@ class Mesa {
         if($pedidos){
 
             foreach($pedidos as $pedido){
-                if($pedido instanceof Pedido){
-                    $pedidosProductos = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
-                    if($pedidosProductos){
-                        foreach($pedidosProductos as $pedProd){
-                            $importe += ($pedProd->precio);
-                        }
+                $pedidosProductos = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
+                if($pedidosProductos){
+                    foreach($pedidosProductos as $pedProd){
+                        $importe += ($pedProd->precio);
                     }
                 }
             }

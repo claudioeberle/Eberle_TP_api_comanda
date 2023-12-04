@@ -139,9 +139,9 @@ class ProductoController implements IApiUsable {
         } else {
 
             $payload = json_encode(array("ERROR" => "Error al descargar el archivo"));
-            $response = $response->withHeader('Content-Type', 'application/json');
-        }
+            return $response->withStatus(200)->withHeader('Content-Type', 'application/json')->write($payload);
 
+        }
         return $response->withStatus(200)->withHeader('Content-Type', 'application/json')->write($payload);
     }
 

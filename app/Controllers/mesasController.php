@@ -8,12 +8,14 @@ class MesasController implements IApiUsable {
 
     public function CargarUno($request, $response, $args) {
 
+        $token = trim(explode("Bearer", $request -> getHeaderLine('Authorization'))[1]);
+        $idUsuario = AutentificadorJWT::ObtenerData($token) -> id;
         $codigoMesa = Mesa::AsignarCodigoMesa();
         $posicion = PosicionMesa::ObtenerPosicionLibre();
         if($posicion){
             if($codigoMesa){
 
-                $mesa = new Mesa(false, false, $codigoMesa, new DateTime(), $posicion);
+                $mesa = new Mesa(false, false, $codigoMesa, new DateTime(), $posicion->id, $idUsuario, false);
                 if($mesa){
                     $resultado = $mesa -> GuardarMesa();
                     if($resultado !== false){
@@ -78,47 +80,52 @@ class MesasController implements IApiUsable {
 
             $codigoMesa = $parametros["codigoMesa"];
             $estado = $parametros["estado"];
+            $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
+            if ($mesa) {
+            
+                if($mesa->estado !== 'cerrada'){
+                    
+                    if($estado === 'cerrada' && $mesa->facturada == false){
 
-            if($estado === 'cerrada' || $estado === 'con cliente pagando'){
+                        if($estado === 'cerrada' || $estado === 'con cliente pagando'){
 
-                $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
-                if ($mesa) {
-
-                    if($mesa->estado !== 'cerrada'){
-                        $mesa->ActualizarListaPedidos();
-
-                        if(!$mesa->HayPedidosPendientes()){
-                            
-                            if($mesa -> CambiarEstado($estado, $puestoToken)){
-                                $payload = json_encode(array("ESTADO" => "Se modifico el estado de la mesa {$codigoMesa} a '{$estado}'"));
-                                if($estado === 'cerrada'){
-                                    PosicionMesa::Modificar($mesa->idPosicion, false);
-                                }
-                            } else {
-                                $payload = json_encode(array("ERROR" => "Recuerde que solo un 'socio' puede cerrar una mesa"));
-                            }
-                        } else{
-                            $pedidosPendientes = $mesa->ObtenerPedidosPendientes();
-                            if($pedidosPendientes !== false){
+                            $mesa->ActualizarListaPedidos();
+    
+                            if(!$mesa->HayPedidosPendientes()){
                                 
-                                foreach($pedidosPendientes as $pedido){
-                                    $mensaje = 'La mesa tiene pendientes los pedidos: \n';
-                                    $mensaje .= $pedido->codigoPedido . "\n";
-                                }                                
-                                $payload = json_encode(array("ERROR" => $mensaje));
-
-                            } else {
-                                $payload = json_encode(array("ERROR" => "Todavia quedan pedidos pendientes"));
+                                if($mesa -> CambiarEstado($estado, $puestoToken)){
+                                    $payload = json_encode(array("ESTADO" => "Se modifico el estado de la mesa {$codigoMesa} a '{$estado}'"));
+                                    if($estado === 'cerrada'){
+                                        PosicionMesa::Modificar($mesa->idPosicion, false);
+                                    }
+                                } else {
+                                    $payload = json_encode(array("ERROR" => "Recuerde que solo un 'socio' puede cerrar una mesa"));
+                                }
+                            } else{
+                                $pedidosPendientes = $mesa->ObtenerPedidosPendientes();
+                                if($pedidosPendientes !== false){
+                                    
+                                    foreach($pedidosPendientes as $pedido){
+                                        $mensaje = 'La mesa tiene pendientes los pedidos: \n';
+                                        $mensaje .= $pedido->codigoPedido . "\n";
+                                    }                                
+                                    $payload = json_encode(array("ERROR" => $mensaje));
+    
+                                } else {
+                                    $payload = json_encode(array("ERROR" => "Todavia quedan pedidos pendientes"));
+                                }
                             }
+                        } else {
+                            $payload = json_encode(array("ERROR" => "El estado propuesto no esta permitido"));
                         }
                     } else {
-                        $payload = json_encode(array("ERROR" => "Esta mesa se encuentra cerrada"));
-                    }
+                        $payload = json_encode(array("ERROR" => "No puede cerrar una mesa que aun no ha sido facturada"));
+                    } 
                 } else {
-                    $payload = json_encode(array("ERROR" => "No se pudo encontrar una mesa con el código {$codigoMesa}"));
+                        $payload = json_encode(array("ERROR" => "La mesa informada ya se encuentra cerrada."));
                 }
             } else {
-                $payload = json_encode(array("ERROR" => "El estado propuesto no esta permitido"));
+                $payload = json_encode(array("ERROR" => "No se pudo encontrar una mesa con el código {$codigoMesa}"));
             }
         } else {
             $payload = json_encode(array("ERROR" => "El parámetro 'codigoMesa' y 'estado' son obligatorios para modificar el estado de una mesa"));
@@ -174,18 +181,20 @@ class MesasController implements IApiUsable {
             $codigoMesa = $parametros['codigoMesa'];
             $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
             if($mesa){
-
                 if(!$mesa->HayPedidosPendientes()){
-                    $facturacion = $mesa->GenerarFacturacion();
-                    if($facturacion > 0){
-                        
-                        $mesa->CambiarEstado('con cliente pagando', $puestoToken);
-                        array_push($retorno, ['Detalles', $mesa->GenerarDetalleFacturacion()]);
-                        array_push($retorno, ['Importe Total' => "$ {$facturacion}"]);
-                        $payload = json_encode(array("Factura" => $retorno));
-
+                    if($mesa->facturada){
+                        $facturacion = $mesa->GenerarFacturacion();
+                        if($facturacion > 0){
+                            $mesa->CambiarEstado('con cliente pagando', $puestoToken);
+                            array_push($retorno, ['Detalles', $mesa->GenerarDetalleFacturacion()]);
+                            array_push($retorno, ['Importe Total' => "$ {$facturacion}"]);
+                            $payload = json_encode(array("Factura" => $retorno));
+                            $mesa->facturada = true;
+                        } else {
+                            $payload = json_encode(array("ERROR" => "Hubo un error en el calculo de la facturacion"));
+                        }
                     } else {
-                        $payload = json_encode(array("ERROR" => "Hubo un error en el calculo de la facturacion"));
+                        $payload = json_encode(array("ERROR" => "La factura de esta mesa ya fue emitida"));
                     }
                 } else {
                     $payload = json_encode(array("ERROR" => "Aun hay pedidos pendientes para esta mesa - Para facturar debe entregarlos o anularlos"));

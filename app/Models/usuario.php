@@ -50,7 +50,7 @@ class Usuario {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         if ($activo) {
-            $query = "SELECT * FROM usuarios WHERE activo = TRUE";
+            $query = "SELECT * FROM usuarios WHERE activo = true";
         } else {
             $query = "SELECT * FROM usuarios";
         }
@@ -73,7 +73,7 @@ class Usuario {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         if ($activo) {
-            $query = "SELECT * FROM usuarios WHERE dni = :dni AND activo = TRUE";
+            $query = "SELECT * FROM usuarios WHERE dni = :dni AND activo = true";
         } else {
             $query = "SELECT * FROM usuarios WHERE dni = :dni";
         }
@@ -95,7 +95,7 @@ class Usuario {
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         if ($activo) {
 
-            $query = "SELECT * FROM usuarios WHERE id = :id AND activo = TRUE";
+            $query = "SELECT * FROM usuarios WHERE id = :id AND activo = true";
         } else {
             
             $query = "SELECT * FROM usuarios WHERE id = :id";
@@ -138,7 +138,7 @@ class Usuario {
     }
     
     public static function Login($email, $password) {
-        $retorno = "Revise los datos ingresados";
+        $retorno = "Usuario no autorizado a ingresar al sistema o no existente";
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
         $consulta = $objetoAccesoDatos -> RetornarConsulta("SELECT * FROM usuarios WHERE email = :email AND activo = true");
         $consulta -> bindParam(':email', $email);
@@ -161,7 +161,7 @@ class Usuario {
     public static function Eliminar($id) {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
-        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE usuarios SET activo = FALSE WHERE id = :id");
+        $consulta = $objetoAccesoDatos -> RetornarConsulta("UPDATE usuarios SET activo = false WHERE id = :id");
         $consulta -> bindParam(':id', $id);
         $resultado = $consulta -> execute();
 

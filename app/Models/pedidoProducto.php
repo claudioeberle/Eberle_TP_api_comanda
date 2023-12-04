@@ -225,6 +225,34 @@ class PedidoProducto {
         return 0;
     }
 
+    public function ObtenerRetraso(){
+        $tiempoEstimado = $this->tiempoEstimado;
+    
+        if(is_string($this->fechaAlta)){
+            $fechaAlta = new DateTime($this->fechaAlta);
+        } else {
+            $fechaAlta = $this->fechaAlta;
+        }
+
+        if(is_string($this->fechaResolucion)){
+            $horaResolucionReal = new DateTime($this->fechaResolucion);
+        } else {
+            $horaResolucionReal = $this->fechaResolucion;
+        }
+
+        $horaResolucionIdeal = clone $fechaAlta;
+    
+        $horaResolucionIdeal->modify("+$tiempoEstimado minutes");
+    
+        if ($horaResolucionReal > $horaResolucionIdeal) {
+            $diferencia = $horaResolucionReal->diff($horaResolucionIdeal);
+            $minutosDiferencia = $diferencia->days * 24 * 60 + $diferencia->h * 60 + $diferencia->i;
+    
+            return $minutosDiferencia;
+        }
+    
+        return 0;
+    }
 }
 
 ?>

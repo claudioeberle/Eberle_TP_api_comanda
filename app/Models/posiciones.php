@@ -46,7 +46,7 @@ class PosicionMesa{
         $posiciones = PosicionMesa::ObtenerTodasLasPosiciones();
         if($posiciones){
             foreach($posiciones as $posicion){
-                if($posicion->enUso){
+                if(!$posicion->enUso){
                     $retorno = $posicion;
                     break;
                 }

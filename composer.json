@@ -2,7 +2,7 @@
     "require": {
         "slim/slim": "^4.12",
         "slim/psr7": "^1.6",
-        "firebase/php-jwt": "^6.9"
+        "firebase/php-jwt": "^6.9",
+        "dompdf/dompdf": "^2.0"
     }
 }
-

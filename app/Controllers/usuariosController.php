@@ -49,10 +49,11 @@ class UsuarioController implements IApiUsable {
     }
 
     public function TraerPorPuesto($request, $response, $args) {
+        $parametros = $request -> getParsedBody();
 
-        if (isset($args[ "puesto" ])) {
+        if (isset($parametros[ "puesto" ])) {
 
-            $lista = Usuario::ObtenerUsuariosPorPuesto($args["puesto"], true);
+            $lista = Usuario::ObtenerUsuariosPorPuesto($parametros["puesto"], true);
 
             if ($lista) {
 
@@ -73,24 +74,26 @@ class UsuarioController implements IApiUsable {
     }
 
     public function TraerUno($request, $response, $args) {
-        if (isset($args["dni"])) {
+        $parametros = $request -> getParsedBody();
 
-            $usuario = Usuario::ObtenerPorDNI($args["dni"], true);
+        if (isset($parametros["dni"])) {
+
+            $usuario = Usuario::ObtenerPorDNI($parametros["dni"], true);
 
             if ($usuario) {
                 $payload = json_encode(array("Usuario" => $usuario));
             } else {
-                $payload = json_encode(array("ERROR" => "No se encontró al usuario con el DNI {$args["dni"]}"));
+                $payload = json_encode(array("ERROR" => "No se encontró al usuario con el DNI {$parametros["dni"]}"));
             }
         } 
-        else if (isset($args[ "id" ])) {
+        else if (isset($parametros[ "id" ])) {
 
-            $usuario = Usuario::ObtenerPorID($args["id"], true);
+            $usuario = Usuario::ObtenerPorID($parametros["id"], true);
 
             if ($usuario) {
                 $payload = json_encode(array("Usuario" => $usuario));
             } else {
-                $payload = json_encode(array("ERROR" => "No se encontró al usuario con el ID {$args["id"]}"));
+                $payload = json_encode(array("ERROR" => "No se encontró al usuario con el ID {$parametros["id"]}"));
             }
         }
         else {
@@ -103,22 +106,24 @@ class UsuarioController implements IApiUsable {
     }
 
     public function EliminarUno($request, $response, $args) {
-        if (isset($args[ "id" ])) {
+        $parametros = $request -> getParsedBody();
+
+        if (isset($parametros["id"])) {
         
-            $resultado = Usuario::Eliminar($args["id"]);
+            $resultado = Usuario::Eliminar($parametros["id"]);
 
             if ($resultado) {
 
-                $payload = json_encode(array("Resultado" => "Se eliminó el usuario con el id {$args["id"]}"));
+                $payload = json_encode(array("Resultado" => "Se suspendio el usuario con el id {$parametros["id"]}"));
 
             } else {
 
-                $payload = json_encode(array("ERROR" => "No seencontró el usuario con el id {$args["id"]}"));
+                $payload = json_encode(array("ERROR" => "No se encontró el usuario con el id {$parametros["id"]}"));
             }
         } 
         else {
 
-            $payload = json_encode(array("ERROR" => "El parámetro 'id' es obligatorio."));
+            $payload = json_encode(array("ERROR" => "El parametro 'id' es obligatorio."));
         }
 
         $response->getBody()->write($payload);
