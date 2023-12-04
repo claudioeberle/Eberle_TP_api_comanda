@@ -90,6 +90,24 @@ class Mesa {
         return $retorno;
     }
 
+    public static function ObtenerListaPorMozo($idMozo) {
+        $retorno = false;
+        $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
+        $query = "SELECT * FROM mesas WHERE idMozo = :idMozo";
+        $consulta = $objetoAccesoDatos -> RetornarConsulta($query);
+        $consulta -> bindParam(':idMozo', $idMozo);
+        $resultado = $consulta -> execute();
+        $arrayObtenido = array();
+        $mesas = array();
+        $arrayObtenido = $consulta->fetchAll(PDO::FETCH_OBJ);
+        foreach($arrayObtenido as $i){
+            $mesa = new Mesa($i->id, $i->estado, $i->codigoMesa, $i->fecha, $i->idPosicion, $i->idMozo, $i->facturada);
+            $mesa->ActualizarListaPedidos();
+            $mesas[] = $mesa;
+        }
+        return $mesas;
+    }
+
     public static function ObtenerPorCodigoMesa($codigoMesa) {
         $retorno = false;
         $objetoAccesoDatos = AccesoDatos::dameUnObjetoAcceso();
@@ -291,6 +309,15 @@ class Mesa {
             $retorno = $detalles;
         }
         return $retorno;
+    }
+
+    public static function CantidadMesasMozo($idMozo){
+        $cantMesas = 0;
+        $mesas = self::ObtenerListaPorMozo($idMozo);
+        if($mesas){
+            $cantMesas = count($mesas);
+        }
+        return $cantMesas;
     }
 
 

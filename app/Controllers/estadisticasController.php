@@ -16,6 +16,11 @@ class EstadisticasController{
         $fechaInicio = clone $fechaHoy;
         $fechaInicio = $fechaInicio->modify("-$lapso minutes");
         $retorno = array();
+        $cantSabrina = Mesa::CantidadMesasMozo(19);
+        $cantRodrigo = Mesa::CantidadMesasMozo(22);
+        $cantHugo = Mesa::CantidadMesasMozo(26);
+        $MesasMozos = ['Sabrina' => $cantSabrina, 'Rodrigo' => $cantRodrigo, 'Hugo' => $cantHugo];
+
         $pedidos = PedidoProducto::ObtenerTodosLosPedidoProducto();
         if($pedidos){
 
@@ -47,7 +52,8 @@ class EstadisticasController{
             'Cantidad Pedidos Retrasados' => $cantRetrasos, 
             'Promedio Minutos Retraso' => $promedioRetrasos, 
             'Cantidad Pedidos A Tiempo' => $cantATiempo, 
-            'Precio Promedio Pedidos' => $promedioPrecios
+            'Precio Promedio Pedidos' => $promedioPrecios,
+            'Cantidad Mesas Por Mozo' => $MesasMozos
             ]);
             $payload = json_encode(array("Estadisticas 30 dias" => $retorno));
 
