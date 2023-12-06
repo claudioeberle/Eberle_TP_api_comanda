@@ -3,7 +3,6 @@
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/mesa.php';
 require_once 'C:\xampp\htdocs\api-comanda-3\app\/Models/encuesta.php';
 use Dompdf\Dompdf;
-use Dompdf\Options;
 
 class EncuestasController{
 
@@ -23,31 +22,36 @@ class EncuestasController{
             $puntosCocinero = $parametros['puntosCocinero'];
             $experiencia = $parametros['experiencia'];
 
-            if(($puntosMesa >= 0 && $puntosMesa <= 10) && ($puntosResto >= 0 && $puntosResto <= 10) 
-            && ($puntosMozo >= 0 && $puntosMozo <= 10) && ($puntosCocinero >= 0 && $puntosCocinero <= 10)
-            && (strlen($experiencia) >= 0 && strlen($experiencia) <= 100)){
+            $encuestaPrevia = Encuesta::ObtenerPorCodigoMesa($codigoMesa);
+            if(!$encuestaPrevia){
+                if(($puntosMesa >= 0 && $puntosMesa <= 10) && ($puntosResto >= 0 && $puntosResto <= 10) 
+                && ($puntosMozo >= 0 && $puntosMozo <= 10) && ($puntosCocinero >= 0 && $puntosCocinero <= 10)
+                && (strlen($experiencia) >= 0 && strlen($experiencia) <= 100)){
 
-                $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
-                if($mesa){
-                    if($mesa->estado === 'cerrada'){
-                        $encuesta = new Encuesta(0, $codigoMesa, $puntosMesa, $puntosResto, $puntosMozo, $puntosCocinero, $experiencia);
-                        $resultado = $encuesta -> GuardarEncuesta();
+                    $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
+                    if($mesa){
+                        if($mesa->estado === 'cerrada'){
+                            $encuesta = new Encuesta(0, $codigoMesa, $puntosMesa, $puntosResto, $puntosMozo, $puntosCocinero, $experiencia);
+                            $resultado = $encuesta -> GuardarEncuesta();
 
-                        if ($resultado) {
-                            $payload = json_encode(array("Resultado" => "Se ha creado con la encuesta Nº '{$resultado}'"));
+                            if ($resultado) {
+                                $payload = json_encode(array("Resultado" => "Se ha creado con la encuesta Nº '{$resultado}'"));
 
+                            } else {
+                                $payload = json_encode(array("ERROR" => "Hubo un error en el alta de la encuesta"));
+                            }
                         } else {
-                            $payload = json_encode(array("ERROR" => "Hubo un error en el alta de la encuesta"));
+                            $payload = json_encode(array("ERROR" => "Para cargar la encuenta la mesa debe estar cerrada"));
                         }
                     } else {
-                        $payload = json_encode(array("ERROR" => "Para cargar la encuenta la mesa debe estar cerrada"));
+                        $payload = json_encode(array("ERROR" => "No se encontro una mesa para el codigo {$codigoMesa}"));
                     }
                 } else {
-                    $payload = json_encode(array("ERROR" => "No se encontro una mesa para el codigo {$codigoMesa}"));
-                }
+                    $payload = json_encode(array("ERROR" => "Revise los datos ingresados. Puntajes 0-10. Exp 0-100"));
+                }   
             } else {
-                $payload = json_encode(array("ERROR" => "Revise los datos ingresados. Puntajes 0-10. Exp 0-100"));
-            }   
+                $payload = json_encode(array("ERROR" => "Ya existe una encuesta para esa mesa"));
+            }
         }
         $response -> getBody() -> write($payload);
         return $response -> withHeader('Content-Type', 'application/json');
@@ -117,7 +121,7 @@ class EncuestasController{
     public function GuardarLogoPdf($request, $response, $args){
 
         $dompdf = new Dompdf();
-        $html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Document</title></head><body><img src="https://www.cronista.com/files/image/306/306621/5ffe2e44324f6.jpg" alt="LOGO-EMPRESA"></body></html>';
+        $html = '<html><body><img src="https://www.cronista.com/files/image/306/306621/5ffe2e44324f6.jpg" alt="LOGO-EMPRESA"></body></html>';
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();

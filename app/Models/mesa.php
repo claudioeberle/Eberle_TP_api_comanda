@@ -276,15 +276,10 @@ class Mesa {
         $importe = 0;
         $pedidos = Mesa::ObtenerPedidosDeUnaMesa($this->id);
         if($pedidos){
-
             foreach($pedidos as $pedido){
-                $pedidosProductos = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
-                if($pedidosProductos){
-                    foreach($pedidosProductos as $pedProd){
-                        $importe += ($pedProd->precio);
-                    }
+                        $importe += ($pedido->precio);
+                    
                 }
-            }
             $retorno = $importe;
         }
         return $retorno;
@@ -295,16 +290,9 @@ class Mesa {
         $detalles = array();
         $pedidos = Mesa::ObtenerPedidosDeUnaMesa($this->id);
         if($pedidos){
-
             foreach($pedidos as $pedido){
-                if($pedido instanceof Pedido){
-                    $pedidosProductos = PedidoProducto::ObtenerListaPorCodigoPedido($pedido->codigoPedido);
-                    if($pedidosProductos){
-                        foreach($pedidosProductos as $pedProd){
-                            array_push($detalles, [$pedProd->producto->nombre => " {$pedProd->producto->precio}", 'Cantidad: ' => $pedProd->cantidad]);
-                        }
-                    }
-                }
+      
+                array_push($detalles, ["{$pedido->producto->nombre}" => " {$pedido->producto->precio}", 'Cantidad: ' => $pedido->cantidad]);      
             }
             $retorno = $detalles;
         }

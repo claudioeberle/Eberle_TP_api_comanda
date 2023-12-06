@@ -85,7 +85,7 @@ class MesasController implements IApiUsable {
             
                 if($mesa->estado !== 'cerrada'){
                     
-                    if($estado === 'cerrada' && $mesa->facturada == false){
+                    if($estado === 'cerrada' && $mesa->facturada == true){
 
                         if($estado === 'cerrada' || $estado === 'con cliente pagando'){
 
@@ -182,7 +182,7 @@ class MesasController implements IApiUsable {
             $mesa = Mesa::ObtenerPorCodigoMesa($codigoMesa);
             if($mesa){
                 if(!$mesa->HayPedidosPendientes()){
-                    if($mesa->facturada){
+                    if(!$mesa->facturada){
                         $facturacion = $mesa->GenerarFacturacion();
                         if($facturacion > 0){
                             $mesa->CambiarEstado('con cliente pagando', $puestoToken);
@@ -190,6 +190,7 @@ class MesasController implements IApiUsable {
                             array_push($retorno, ['Importe Total' => "$ {$facturacion}"]);
                             $payload = json_encode(array("Factura" => $retorno));
                             $mesa->facturada = true;
+                            $mesa->Modificar();
                         } else {
                             $payload = json_encode(array("ERROR" => "Hubo un error en el calculo de la facturacion"));
                         }
